@@ -1,3 +1,5 @@
+import Logging from "./Logging";
+
 function App() {
   return (
     <>
@@ -157,22 +159,7 @@ function App() {
           <div style={{ backgroundColor: 'var(--bs-secondary)' }}></div>
         </section>
       </section>
-      <section
-        className="d-grid"
-        style={{ overflowY: 'auto', gridTemplateRows: 'auto 1fr', rowGap: '0.75rem' }}
-      >
-        <div className="form-check">
-          <input
-            id="formCheck-1"
-            className="form-check-input"
-            type="checkbox"
-          />
-          <label className="form-check-label" htmlFor="formCheck-1">
-            Logging enabled
-          </label>
-        </div>
-        <textarea readOnly></textarea>
-      </section>
+      <Logging  />
     </>
   );
 }
