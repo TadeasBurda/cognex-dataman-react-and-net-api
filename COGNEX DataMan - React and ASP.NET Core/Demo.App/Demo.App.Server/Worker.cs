@@ -85,59 +85,14 @@ internal class Worker(
 
             _dataManSystem = new DataManSystem(_systemConnector) { DefaultTimeout = 5000 };
 
-            // Subscribe to events that are signalled when the system is connected / disconnected.
-            _dataManSystem.SystemConnected += (_, _) =>
-            {
-                SendSystemConnectedAsync?.Invoke();
-            };
-            _dataManSystem.SystemDisconnected += (_, _) =>
-            {
-                SendSystemDisconnectedAsync?.Invoke();
-            };
-            _dataManSystem.SystemWentOnline += (_, _) =>
-            {
-                SendSystemWentOnlineAsync?.Invoke();
-            };
-            _dataManSystem.SystemWentOffline += (_, _) =>
-            {
-                SendSystemWentOfflineAsync?.Invoke();
-            };
-            _dataManSystem.KeepAliveResponseMissed += (_, _) =>
-            {
-                SendKeepAliveResponseMissedAsync?.Invoke();
-            };
-            _dataManSystem.BinaryDataTransferProgress += (_, args) =>
-            {
-                Log(
-                    "OnBinaryDataTransferProgress",
-                    string.Format(
-                        "{0}: {1}% of {2} bytes (Type={3}, Id={4})",
-                        args.Direction == TransferDirection.Incoming ? "Receiving" : "Sending",
-                        args.TotalDataSize > 0
-                            ? (int)(100 * (args.BytesTransferred / (double)args.TotalDataSize))
-                            : -1,
-                        args.TotalDataSize,
-                        args.ResultType.ToString(),
-                        args.ResponseId
-                    )
-                );
-            };
-            _dataManSystem.OffProtocolByteReceived += (_, args) =>
-            {
-                Log("OffProtocolByteReceived", string.Format("{0}", (char)args.Byte));
-            };
-            _dataManSystem.AutomaticResponseArrived += (_, args) =>
-            {
-                Log(
-                    "AutomaticResponseArrived",
-                    string.Format(
-                        "Type={0}, Id={1}, Data={2} bytes",
-                        args.DataType.ToString(),
-                        args.ResponseId,
-                        args.Data != null ? args.Data.Length : 0
-                    )
-                );
-            };
+            _dataManSystem.SystemConnected += OnSystemConnected;
+            _dataManSystem.SystemDisconnected += OnSystemDisconnected;
+            _dataManSystem.SystemWentOnline += OnSystemWentOnline;
+            _dataManSystem.SystemWentOffline += OnSystemWentOffline;
+            _dataManSystem.KeepAliveResponseMissed += OnKeepAliveResponseMissed;
+            _dataManSystem.BinaryDataTransferProgress += OnBinaryDataTransferProgress;
+            _dataManSystem.OffProtocolByteReceived += OffProtocolByteReceived;
+            _dataManSystem.AutomaticResponseArrived += AutomaticResponseArrived;
 
             // Subscribe to events that are signalled when the device sends auto-responses.
             ResultTypes requested_result_types =
@@ -280,6 +235,66 @@ internal class Worker(
 
         _systemConnector = null;
         _dataManSystem = null;
+    }
+
+    private void AutomaticResponseArrived(object sender, AutomaticResponseArrivedEventArgs args)
+    {
+        Log(
+            "AutomaticResponseArrived",
+            string.Format(
+                "Type={0}, Id={1}, Data={2} bytes",
+                args.DataType.ToString(),
+                args.ResponseId,
+                args.Data != null ? args.Data.Length : 0
+            )
+        );
+    }
+
+    private void OffProtocolByteReceived(object sender, OffProtocolByteReceivedEventArgs args)
+    {
+        Log("OffProtocolByteReceived", string.Format("{0}", (char)args.Byte));
+    }
+
+    private void OnBinaryDataTransferProgress(object sender, BinaryDataTransferProgressEventArgs args)
+    {
+        Log(
+            "OnBinaryDataTransferProgress",
+            string.Format(
+                "{0}: {1}% of {2} bytes (Type={3}, Id={4})",
+                args.Direction == TransferDirection.Incoming ? "Receiving" : "Sending",
+                args.TotalDataSize > 0
+                    ? (int)(100 * (args.BytesTransferred / (double)args.TotalDataSize))
+                    : -1,
+                args.TotalDataSize,
+                args.ResultType.ToString(),
+                args.ResponseId
+            )
+        );
+    }
+
+    private void OnKeepAliveResponseMissed(object sender, EventArgs args)
+    {
+        SendKeepAliveResponseMissedAsync?.Invoke();
+    }
+
+    private void OnSystemWentOffline(object sender, EventArgs args)
+    {
+        SendSystemWentOfflineAsync?.Invoke();
+    }
+
+    private void OnSystemWentOnline(object sender, EventArgs args)
+    {
+        SendSystemWentOnlineAsync?.Invoke();
+    }
+
+    private void OnSystemDisconnected(object sender, EventArgs args)
+    {
+        SendSystemDisconnectedAsync?.Invoke();
+    }
+
+    private void OnSystemConnected(object sender, EventArgs args)
+    {
+        SendSystemConnectedAsync?.Invoke();
     }
 
     private void InitializeScannerLogger(ScannerLogger scannerLogger)
