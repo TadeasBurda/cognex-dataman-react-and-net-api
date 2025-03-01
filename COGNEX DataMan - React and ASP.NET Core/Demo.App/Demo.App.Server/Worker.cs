@@ -1,13 +1,14 @@
 ﻿using Microsoft.AspNetCore.SignalR;
+using SignalRSwaggerGen.Attributes;
 
 namespace Demo.App.Server;
 
-// SignalR Hub
+[SignalRHub]
 public class DataHub(WorkerService workerService) : Hub
 {
     private readonly WorkerService _workerService = workerService;
 
-  public async Task SetLoggingEnabled(bool isEnabled)
+    public async Task SetLoggingEnabled(bool isEnabled)
     {
         _workerService.SetLoggingEnabled(isEnabled);
         await Clients.All.SendAsync("LoggingStatusChanged", isEnabled);
