@@ -1,1 +1,2 @@
-export * from './loggingServices';
+export * from './scannerAPI';
+export * from './scannersAPI';

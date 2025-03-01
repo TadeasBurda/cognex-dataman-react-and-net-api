@@ -1,7 +1,6 @@
 using Demo.App.Server;
 using Demo.App.Server.Endpoints;
 using Demo.App.Server.Hubs;
-using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -30,7 +29,7 @@ app.UseHttpsRedirection();
 
 app.MapHub<LoggingHub>("/logging");
 
-app.AddLoggingEndpoints();
+app.AddScannerEndpoints();
 
 app.MapFallbackToFile("/index.html");
 

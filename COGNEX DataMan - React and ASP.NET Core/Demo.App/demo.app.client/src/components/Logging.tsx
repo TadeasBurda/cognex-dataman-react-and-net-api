@@ -1,6 +1,6 @@
 import { HubConnectionBuilder } from "@microsoft/signalr";
 import { JSX, useEffect, useState } from "react";
-import { postLoggingEnabled } from "../api";
+import { postScannerLoggingEnabled } from "../api";
 
 export default function Logging(): JSX.Element {
   const [loggingEnabled, setLoggingEnabled] = useState(false);
@@ -9,7 +9,7 @@ export default function Logging(): JSX.Element {
   const handleCheckboxChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const isChecked = event.target.checked;
     setLoggingEnabled(isChecked);
-    postLoggingEnabled(isChecked);
+    postScannerLoggingEnabled(isChecked);
   };
 
   useEffect(() => {
