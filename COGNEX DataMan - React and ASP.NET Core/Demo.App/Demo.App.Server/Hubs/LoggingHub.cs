@@ -1,16 +1,21 @@
 ﻿using Microsoft.AspNetCore.SignalR;
-using SignalRSwaggerGen.Attributes;
 
 namespace Demo.App.Server.Hubs;
 
-[SignalRHub]
-internal class LoggingHub(Worker worker) : Hub
+public interface ILoggingHub
 {
-    private readonly Worker _worker = worker;
+    Task Logs(string message);
+}
 
-    public async Task SetLoggingEnabled(bool isEnabled)
+internal class LoggingHub : Hub<ILoggingHub>
+{
+    public LoggingHub(Worker worker)
     {
-        _worker.SetScannerLogging(isEnabled);
-        await Clients.All.SendAsync("LoggingStatusChanged", isEnabled);
+        worker.SendLogMessageAsync = SendLogMessageAsync;
+    }
+
+    private async Task SendLogMessageAsync(string message)
+    {
+        await Clients.All.Logs(message);
     }
 }

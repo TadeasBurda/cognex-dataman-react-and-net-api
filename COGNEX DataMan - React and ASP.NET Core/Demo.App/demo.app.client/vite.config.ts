@@ -47,11 +47,11 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      '^/weatherforecast': {
+      '^/api': {
         target,
         secure: false
       },
-      '^/dataHub': {
+      '^/logging': {
         target,
         ws: true,
         secure: false,

@@ -1,8 +1,8 @@
-﻿using Cognex.DataMan.SDK;
+﻿using System.Diagnostics;
+using Cognex.DataMan.SDK;
 using Demo.App.Server.Hubs;
 using Demo.App.Server.Services;
 using Microsoft.AspNetCore.SignalR;
-using System.Diagnostics;
 
 namespace Demo.App.Server;
 
@@ -25,14 +25,19 @@ internal class Worker(
     private ISystemConnector? _connector;
     private ScannerLogger? _scannerLogger;
 
-    private void InitializeScannerLogger(
-        ScannerLogger scannerLogger,
-        CancellationToken cancellationToken
-    )
+    internal Func<string, Task>? SendLogMessageAsync { get; set; }
+
+    private void InitializeScannerLogger(ScannerLogger scannerLogger)
     {
-        scannerLogger.ReceivedAsync = async (message) =>
+        scannerLogger.ReceivedAsync = async message =>
         {
-            await _loggingHubContext.Clients.All.SendAsync("Logs", message, cancellationToken);
+            if (SendLogMessageAsync == null)
+            {
+                _logger.LogWarning("{Func} is not initialized", nameof(SendLogMessageAsync));
+                return;
+            }
+
+            await SendLogMessageAsync(message);
         };
     }
 
@@ -89,7 +94,7 @@ internal class Worker(
         using var scope = _serviceProvider.CreateScope();
 
         _scannerLogger = scope.ServiceProvider.GetRequiredService<ScannerLogger>();
-        InitializeScannerLogger(_scannerLogger, stoppingToken);
+        InitializeScannerLogger(_scannerLogger);
 
         await Task.Delay(Timeout.Infinite, stoppingToken);
     }

@@ -1,25 +1,20 @@
 import { HubConnectionBuilder } from "@microsoft/signalr";
 import { JSX, useEffect, useState } from "react";
+import { postLoggingEnabled } from "../api";
 
 export default function Logging(): JSX.Element {
   const [loggingEnabled, setLoggingEnabled] = useState(false);
   const [messages, setMessages] = useState<string[]>([]);
 
-  const connection = new HubConnectionBuilder()
-    .withUrl("/dataHub")
-    .build();
-
-  connection.start().catch(err => console.error(err.toString()));
-
   const handleCheckboxChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const isChecked = event.target.checked;
     setLoggingEnabled(isChecked);
-    await connection.invoke("SetLoggingEnabled", isChecked);
+    postLoggingEnabled(isChecked);
   };
 
   useEffect(() => {
     const connection = new HubConnectionBuilder()
-      .withUrl("dataHub", { withCredentials: false })
+      .withUrl("logging", { withCredentials: false })
       .withAutomaticReconnect()
       .build();
 

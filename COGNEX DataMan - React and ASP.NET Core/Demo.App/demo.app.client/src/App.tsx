@@ -1,4 +1,4 @@
-import Logging from "./Logging";
+import { Logging } from "./components";
 
 function App() {
   return (
