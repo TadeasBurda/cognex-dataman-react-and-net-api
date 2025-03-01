@@ -92,31 +92,6 @@ internal class Worker(
             _dataManSystem.SystemDisconnected += (_, _) =>
             {
                 SendSystemDisconnectedAsync?.Invoke();
-
-                bool reset_gui = false;
-
-                if (!_closing && _autoconnect && _autoReconnect)
-                {
-                    frmReconnecting frm = new frmReconnecting(this, _system);
-
-                    if (frm.ShowDialog() == DialogResult.Cancel)
-                        reset_gui = true;
-                }
-                else
-                {
-                    reset_gui = true;
-                }
-
-                if (reset_gui)
-                {
-                    btnConnect.Enabled = true;
-                    btnDisconnect.Enabled = false;
-                    btnTrigger.Enabled = false;
-                    cbLiveDisplay.Enabled = false;
-
-                    picResultImage.Image = null;
-                    lbReadString.Text = "";
-                }
             };
             _dataManSystem.SystemWentOnline += (_, _) =>
             {

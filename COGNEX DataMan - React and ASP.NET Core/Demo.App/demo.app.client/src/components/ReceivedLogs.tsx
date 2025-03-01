@@ -2,7 +2,7 @@ import { HubConnectionBuilder } from "@microsoft/signalr";
 import { JSX, useEffect, useState } from "react";
 import { postScannerLoggingEnabled } from "../api";
 
-export default function Logging(): JSX.Element {
+export default function ReceivedLogs(): JSX.Element {
   const [loggingEnabled, setLoggingEnabled] = useState(false);
   const [messages, setMessages] = useState<string[]>([]);
 

@@ -1,3 +1,5 @@
+// TODO: After disconnect, reset logs and everything else
+
 import { useMutation } from "@tanstack/react-query";
 import { JSX, useMemo } from "react";
 import { useForm } from "react-hook-form";
