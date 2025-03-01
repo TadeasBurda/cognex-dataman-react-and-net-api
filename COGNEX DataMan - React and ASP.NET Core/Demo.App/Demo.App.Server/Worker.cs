@@ -1,11 +1,11 @@
-﻿using System.Diagnostics;
-using System.Net;
-using Cognex.DataMan.SDK;
-using Cognex.DataMan.SDK.Discovery;
+﻿using Cognex.DataMan.SDK;
 using Cognex.DataMan.SDK.Utils;
 using Demo.App.Server.Hubs;
 using Demo.App.Server.Services;
 using Microsoft.AspNetCore.SignalR;
+using System.Drawing;
+using System.Net;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace Demo.App.Server;
 
@@ -34,8 +34,46 @@ internal class Worker(
     private ResultCollector? _resultCollector;
 
     internal Func<string, Task>? SendLogMessageAsync { get; set; }
+    internal Func<Task>? SendSystemConnectedAsync { get; set; }
+    internal Func<Task>? SendSystemDisconnectedAsync { get; set; }
+    internal Func<Task>? SendSystemWentOnlineAsync { get; set; }
+    internal Func<Task>? SendSystemWentOfflineAsync { get; set; }
+    internal Func<Task>? SendKeepAliveResponseMissedAsync { get; set; }
 
-    private void ConnectInternal(bool autoReconnect, ISystemConnector systemConnector, bool runKeepAliveThread)
+    internal void Connect(
+        bool autoReconnect,
+        IPAddress address,
+        int port,
+        string password,
+        bool runKeepAliveThread
+    )
+    {
+        var ethSystemConnector = new EthSystemConnector(address, port)
+        {
+            UserName = "admin",
+            Password = password,
+        };
+
+        ConnectInternal(autoReconnect, ethSystemConnector, runKeepAliveThread);
+    }
+
+    internal void Connect(
+        bool autoReconnect,
+        string portName,
+        int baudrate,
+        bool runKeepAliveThread
+    )
+    {
+        var serSystemConnector = new SerSystemConnector(portName, baudrate);
+
+        ConnectInternal(autoReconnect, serSystemConnector, runKeepAliveThread);
+    }
+
+    private void ConnectInternal(
+        bool autoReconnect,
+        ISystemConnector systemConnector,
+        bool runKeepAliveThread
+    )
     {
         _autoReconnect = autoReconnect;
         _autoconnect = false;
@@ -47,31 +85,180 @@ internal class Worker(
             _dataManSystem = new DataManSystem(_systemConnector) { DefaultTimeout = 5000 };
 
             // Subscribe to events that are signalled when the system is connected / disconnected.
-            _dataManSystem.SystemConnected += new SystemConnectedHandler(OnSystemConnected);
-            _dataManSystem.SystemDisconnected += new SystemDisconnectedHandler(
-                OnSystemDisconnected
-            );
-            _dataManSystem.SystemWentOnline += new SystemWentOnlineHandler(OnSystemWentOnline);
-            _dataManSystem.SystemWentOffline += new SystemWentOfflineHandler(OnSystemWentOffline);
-            _dataManSystem.KeepAliveResponseMissed += new KeepAliveResponseMissedHandler(
-                OnKeepAliveResponseMissed
-            );
-            _dataManSystem.BinaryDataTransferProgress += new BinaryDataTransferProgressHandler(
-                OnBinaryDataTransferProgress
-            );
-            _dataManSystem.OffProtocolByteReceived += new OffProtocolByteReceivedHandler(
-                OffProtocolByteReceived
-            );
-            _dataManSystem.AutomaticResponseArrived += new AutomaticResponseArrivedHandler(
-                AutomaticResponseArrived
-            );
+            _dataManSystem.SystemConnected += (_, _) =>
+            {
+                SendSystemConnectedAsync?.Invoke();
+            };
+            _dataManSystem.SystemDisconnected += (_, _) =>
+            {
+                SendSystemDisconnectedAsync?.Invoke();
+
+                bool reset_gui = false;
+
+                if (!_closing && _autoconnect && _autoReconnect)
+                {
+                    frmReconnecting frm = new frmReconnecting(this, _system);
+
+                    if (frm.ShowDialog() == DialogResult.Cancel)
+                        reset_gui = true;
+                }
+                else
+                {
+                    reset_gui = true;
+                }
+
+                if (reset_gui)
+                {
+                    btnConnect.Enabled = true;
+                    btnDisconnect.Enabled = false;
+                    btnTrigger.Enabled = false;
+                    cbLiveDisplay.Enabled = false;
+
+                    picResultImage.Image = null;
+                    lbReadString.Text = "";
+                }
+            };
+            _dataManSystem.SystemWentOnline += (_, _) =>
+            {
+                SendSystemWentOnlineAsync?.Invoke();
+            };
+            _dataManSystem.SystemWentOffline += (_, _) =>
+            {
+                SendSystemWentOfflineAsync?.Invoke();
+            };
+            _dataManSystem.KeepAliveResponseMissed += (_, _) =>
+            {
+                SendKeepAliveResponseMissedAsync?.Invoke();
+            };
+            _dataManSystem.BinaryDataTransferProgress += (_, args) =>
+            {
+                Log(
+                    "OnBinaryDataTransferProgress",
+                    string.Format(
+                        "{0}: {1}% of {2} bytes (Type={3}, Id={4})",
+                        args.Direction == TransferDirection.Incoming ? "Receiving" : "Sending",
+                        args.TotalDataSize > 0
+                            ? (int)(100 * (args.BytesTransferred / (double)args.TotalDataSize))
+                            : -1,
+                        args.TotalDataSize,
+                        args.ResultType.ToString(),
+                        args.ResponseId
+                    )
+                );
+            };
+            _dataManSystem.OffProtocolByteReceived += (_, args) =>
+            {
+                Log("OffProtocolByteReceived", string.Format("{0}", (char)args.Byte));
+            };
+            _dataManSystem.AutomaticResponseArrived += (_, args) =>
+            {
+                Log(
+                    "AutomaticResponseArrived",
+                    string.Format(
+                        "Type={0}, Id={1}, Data={2} bytes",
+                        args.DataType.ToString(),
+                        args.ResponseId,
+                        args.Data != null ? args.Data.Length : 0
+                    )
+                );
+            };
 
             // Subscribe to events that are signalled when the device sends auto-responses.
             ResultTypes requested_result_types =
                 ResultTypes.ReadXml | ResultTypes.Image | ResultTypes.ImageGraphics;
             _resultCollector = new ResultCollector(_dataManSystem, requested_result_types);
-            _resultCollector.ComplexResultCompleted += Results_ComplexResultCompleted;
-            _resultCollector.SimpleResultDropped += Results_SimpleResultDropped;
+            _resultCollector.ComplexResultCompleted += (_, e) =>
+            {
+                List<Image> images = new List<Image>();
+                List<string> image_graphics = new List<string>();
+                string read_result = null;
+                int result_id = -1;
+                ResultTypes collected_results = ResultTypes.None;
+
+                // Take a reference or copy values from the locked result info object. This is done
+                // so that the lock is used only for a short period of time.
+                lock (_currentResultInfoSyncLock)
+                {
+                    foreach (var simple_result in e.SimpleResults)
+                    {
+                        collected_results |= simple_result.Id.Type;
+
+                        switch (simple_result.Id.Type)
+                        {
+                            case ResultTypes.Image:
+                                Image image = ImageArrivedEventArgs.GetImageFromImageBytes(
+                                    simple_result.Data
+                                );
+                                if (image != null)
+                                    images.Add(image);
+                                break;
+
+                            case ResultTypes.ImageGraphics:
+                                image_graphics.Add(simple_result.GetDataAsString());
+                                break;
+
+                            case ResultTypes.ReadXml:
+                                read_result = GetReadStringFromResultXml(simple_result.GetDataAsString());
+                                result_id = simple_result.Id.Id;
+                                break;
+
+                            case ResultTypes.ReadString:
+                                read_result = simple_result.GetDataAsString();
+                                result_id = simple_result.Id.Id;
+                                break;
+                        }
+                    }
+                }
+
+                AddListItem(
+                    string.Format(
+                        "Complex result arrived: resultId = {0}, read result = {1}",
+                        result_id,
+                        read_result
+                    )
+                );
+                Log("Complex result contains", string.Format("{0}", collected_results.ToString()));
+
+                if (images.Count > 0)
+                {
+                    Image first_image = images[0];
+
+                    Size image_size = Gui.FitImageInControl(first_image.Size, picResultImage.Size);
+                    Image fitted_image = Gui.ResizeImageToBitmap(first_image, image_size);
+
+                    if (image_graphics.Count > 0)
+                    {
+                        using (Graphics g = Graphics.FromImage(fitted_image))
+                        {
+                            foreach (var graphics in image_graphics)
+                            {
+                                ResultGraphics rg = GraphicsResultParser.Parse(
+                                    graphics,
+                                    new Rectangle(0, 0, image_size.Width, image_size.Height)
+                                );
+                                ResultGraphicsRenderer.PaintResults(g, rg);
+                            }
+                        }
+                    }
+
+                    if (picResultImage.Image != null)
+                    {
+                        var image = picResultImage.Image;
+                        picResultImage.Image = null;
+                        image.Dispose();
+                    }
+
+                    picResultImage.Image = fitted_image;
+                    picResultImage.Invalidate();
+                }
+
+                if (read_result != null)
+                    lbReadString.Text = read_result;
+            };
+            _resultCollector.SimpleResultDropped += (_, e) =>
+            {
+                AddListItem(string.Format("Partial result dropped: {0}, id={1}", e.Id.Type.ToString(), e.Id.Id));
+            };
 
             _dataManSystem.SetKeepAliveOptions(runKeepAliveThread, 3000, 1000);
 
@@ -94,98 +281,6 @@ internal class Worker(
         RefreshGui();
     }
 
-    public void Connect(
-        bool autoReconnect,
-        IPAddress address,
-        int port,
-        string password,
-        bool runKeepAliveThread
-    )
-    {
-        var ethSystemConnector = new EthSystemConnector(address, port)
-        {
-            UserName = "admin",
-            Password = password,
-        };
-
-        ConnectInternal(autoReconnect, ethSystemConnector, runKeepAliveThread);
-    }
-
-    private void RefreshGui()
-    {
-        throw new NotImplementedException();
-    }
-
-    private void AddListItem(string v)
-    {
-        throw new NotImplementedException();
-    }
-
-    private void CleanupConnection()
-    {
-        throw new NotImplementedException();
-    }
-
-    private void Results_SimpleResultDropped(object sender, SimpleResult e)
-    {
-        throw new NotImplementedException();
-    }
-
-    private void Results_ComplexResultCompleted(object sender, ComplexResult e)
-    {
-        throw new NotImplementedException();
-    }
-
-    private void AutomaticResponseArrived(object sender, AutomaticResponseArrivedEventArgs args)
-    {
-        throw new NotImplementedException();
-    }
-
-    private void OffProtocolByteReceived(object sender, OffProtocolByteReceivedEventArgs args)
-    {
-        throw new NotImplementedException();
-    }
-
-    private void OnBinaryDataTransferProgress(
-        object sender,
-        BinaryDataTransferProgressEventArgs args
-    )
-    {
-        throw new NotImplementedException();
-    }
-
-    private void OnKeepAliveResponseMissed(object sender, EventArgs args)
-    {
-        throw new NotImplementedException();
-    }
-
-    private void OnSystemWentOffline(object sender, EventArgs args)
-    {
-        throw new NotImplementedException();
-    }
-
-    private void OnSystemWentOnline(object sender, EventArgs args)
-    {
-        throw new NotImplementedException();
-    }
-
-    private void OnSystemDisconnected(object sender, EventArgs args)
-    {
-        throw new NotImplementedException();
-    }
-
-    private void OnSystemConnected(object sender, EventArgs args)
-    {
-        throw new NotImplementedException();
-    }
-
-    public void Connect(bool autoReconnect, string portName, int baudrate, bool runKeepAliveThread)
-    {
-        var serSystemConnector = new SerSystemConnector(portName, baudrate);
-
-        ConnectInternal(autoReconnect, serSystemConnector, runKeepAliveThread);
-    }
-
     private void InitializeScannerLogger(ScannerLogger scannerLogger)
     {
         scannerLogger.ReceivedAsync = async message =>
@@ -200,20 +295,11 @@ internal class Worker(
         };
     }
 
-    private void Log(string message)
+    private void Log(string function, string message)
     {
         if (_scannerLogger == null)
         {
             _logger.LogWarning("ScannerLogger is not initialized");
-            return;
-        }
-
-        var stackTrace = new StackTrace();
-        var function = stackTrace.GetFrame(1)?.GetMethod()?.Name;
-
-        if (function == null)
-        {
-            _logger.LogWarning("Failed to get function name");
             return;
         }
 
