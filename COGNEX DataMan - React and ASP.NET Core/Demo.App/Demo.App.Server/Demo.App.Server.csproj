@@ -28,4 +28,19 @@
     </ProjectReference>
   </ItemGroup>
 
+  <ItemGroup>
+    <Reference Include="Cognex.DataMan.CogNamer.PC">
+      <HintPath>..\..\..\..\..\..\..\Cognex\DataMan SDK 5.6.3\Binaries\PC\Cognex.DataMan.CogNamer.PC.dll</HintPath>
+    </Reference>
+    <Reference Include="Cognex.DataMan.SDK.Discovery.PC">
+      <HintPath>..\..\..\..\..\..\..\Cognex\DataMan SDK 5.6.3\Binaries\PC\Cognex.DataMan.SDK.Discovery.PC.dll</HintPath>
+    </Reference>
+    <Reference Include="Cognex.DataMan.SDK.PC">
+      <HintPath>..\..\..\..\..\..\..\Cognex\DataMan SDK 5.6.3\Binaries\PC\Cognex.DataMan.SDK.PC.dll</HintPath>
+    </Reference>
+    <Reference Include="Cognex.DataMan.SDK.Utils.PC">
+      <HintPath>..\..\..\..\..\..\..\Cognex\DataMan SDK 5.6.3\Binaries\PC\Cognex.DataMan.SDK.Utils.PC.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
 </Project>
