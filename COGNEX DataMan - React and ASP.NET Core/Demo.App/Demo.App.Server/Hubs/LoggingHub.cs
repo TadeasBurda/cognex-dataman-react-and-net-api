@@ -14,11 +14,18 @@ internal class LoggingHub : Hub<ILoggingHub>
     public LoggingHub(Worker worker)
     {
         worker.SendLogMessageAsync = SendLogMessageAsync;
+        worker.SendConnectLogMessageAsync = SendConnectLogMessageAsync;
+
         worker.SendSystemConnectedAsync = SendSystemConnectedAsync;
         worker.SendSystemDisconnectedAsync = SendSystemDisconnectedAsync;
         worker.SendSystemWentOnlineAsync = SendSystemWentOnlineAsync;
         worker.SendSystemWentOfflineAsync = SendSystemWentOfflineAsync;
         worker.SendKeepAliveResponseMissedAsync = SendKeepAliveResponseMissedAsync;
+    }
+
+    private async Task SendConnectLogMessageAsync(string arg)
+    {
+        await Clients.All.ConnectLogs(arg);
     }
 
     private async Task SendKeepAliveResponseMissedAsync()

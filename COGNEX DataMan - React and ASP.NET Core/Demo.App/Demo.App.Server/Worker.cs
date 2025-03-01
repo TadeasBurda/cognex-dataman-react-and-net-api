@@ -1,10 +1,10 @@
-﻿using Cognex.DataMan.SDK;
+﻿using System.Drawing;
+using System.Net;
+using Cognex.DataMan.SDK;
 using Cognex.DataMan.SDK.Utils;
 using Demo.App.Server.Hubs;
 using Demo.App.Server.Services;
 using Microsoft.AspNetCore.SignalR;
-using System.Drawing;
-using System.Net;
 using static System.Net.Mime.MediaTypeNames;
 
 namespace Demo.App.Server;
@@ -34,6 +34,7 @@ internal class Worker(
     private ResultCollector? _resultCollector;
 
     internal Func<string, Task>? SendLogMessageAsync { get; set; }
+    internal Func<string, Task>? SendConnectLogMessageAsync { get; set; }
     internal Func<Task>? SendSystemConnectedAsync { get; set; }
     internal Func<Task>? SendSystemDisconnectedAsync { get; set; }
     internal Func<Task>? SendSystemWentOnlineAsync { get; set; }
@@ -173,7 +174,9 @@ internal class Worker(
                                 break;
 
                             case ResultTypes.ReadXml:
-                                read_result = GetReadStringFromResultXml(simple_result.GetDataAsString());
+                                read_result = GetReadStringFromResultXml(
+                                    simple_result.GetDataAsString()
+                                );
                                 result_id = simple_result.Id.Id;
                                 break;
 
@@ -232,7 +235,13 @@ internal class Worker(
             };
             _resultCollector.SimpleResultDropped += (_, e) =>
             {
-                AddListItem(string.Format("Partial result dropped: {0}, id={1}", e.Id.Type.ToString(), e.Id.Id));
+                SendConnectLogMessageAsync?.Invoke(
+                    string.Format(
+                        "Partial result dropped: {0}, id={1}",
+                        e.Id.Type.ToString(),
+                        e.Id.Id
+                    )
+                );
             };
 
             _dataManSystem.SetKeepAliveOptions(runKeepAliveThread, 3000, 1000);
@@ -249,11 +258,28 @@ internal class Worker(
         {
             CleanupConnection();
 
-            AddListItem("Failed to connect: " + ex.ToString());
+            SendConnectLogMessageAsync?.Invoke("Failed to connect: " + ex.ToString());
         }
 
         _autoconnect = true;
-        RefreshGui();
+    }
+
+    private void CleanupConnection()
+    {
+        if (_dataManSystem != null)
+        {
+            _dataManSystem.SystemConnected -= OnSystemConnected;
+            _dataManSystem.SystemDisconnected -= OnSystemDisconnected;
+            _dataManSystem.SystemWentOnline -= OnSystemWentOnline;
+            _dataManSystem.SystemWentOffline -= OnSystemWentOffline;
+            _dataManSystem.KeepAliveResponseMissed -= OnKeepAliveResponseMissed;
+            _dataManSystem.BinaryDataTransferProgress -= OnBinaryDataTransferProgress;
+            _dataManSystem.OffProtocolByteReceived -= OffProtocolByteReceived;
+            _dataManSystem.AutomaticResponseArrived -= AutomaticResponseArrived;
+        }
+
+        _systemConnector = null;
+        _dataManSystem = null;
     }
 
     private void InitializeScannerLogger(ScannerLogger scannerLogger)
