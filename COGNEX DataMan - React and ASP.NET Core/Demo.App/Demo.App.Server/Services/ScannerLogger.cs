@@ -11,12 +11,12 @@ internal enum LogTrafficState
 public class ScannerLogger(ILogger<ScannerLogger> logger) : Cognex.DataMan.SDK.ILogger
 {
     private static int _nextSessionId = 0;
-    private static readonly SemaphoreSlim _semaphoreSlim = new(1, 1);
 
     private readonly ILogger<ScannerLogger> _logger = logger;
-    private readonly Queue<string> _messages = [];
 
     public bool Enabled { get; set; }
+
+    public Func<string, Task>? ReceivedAsync { get; set; }
 
     public int GetNextUniqueSessionId()
     {
@@ -25,14 +25,14 @@ public class ScannerLogger(ILogger<ScannerLogger> logger) : Cognex.DataMan.SDK.I
 
     public void Log(string function, string message)
     {
-        EnqueueMessage(
+        SendMessage(
             string.Format("{0}: {1} [{2}]\r\n", function, message, DateTime.Now.ToLongTimeString())
         );
     }
 
     public void LogTraffic(int sessionId, bool isRead, byte[] buffer, int offset, int count)
     {
-        EnqueueMessage(
+        SendMessage(
             string.Format(
                 "Traffic: {0} {1} bytes at {2} [session #{3}]: {4}{5}\r\n",
                 isRead ? LogTrafficState.Read : LogTrafficState.Written,
@@ -66,21 +66,13 @@ public class ScannerLogger(ILogger<ScannerLogger> logger) : Cognex.DataMan.SDK.I
         return stringBuilder.ToString();
     }
 
-    private void EnqueueMessage(string message)
+    private void SendMessage(string message)
     {
-        _semaphoreSlim.Wait();
-        try
+        if (Enabled)
         {
-            if (Enabled)
-            {
-                _messages.Enqueue(message);
+            ReceivedAsync?.Invoke(message);
 
-                _logger.LogDebug("Enqueued message: {Message}", message);
-            }
-        }
-        finally
-        {
-            _semaphoreSlim.Release();
+            _logger.LogDebug("Sended message: {Message}", message);
         }
     }
 }

@@ -1,9 +1,8 @@
-﻿using System.Diagnostics;
-using System.Reflection;
-using Cognex.DataMan.SDK;
+﻿using Cognex.DataMan.SDK;
+using Demo.App.Server.Hubs;
 using Demo.App.Server.Services;
 using Microsoft.AspNetCore.SignalR;
-using SignalRSwaggerGen.Attributes;
+using System.Diagnostics;
 
 namespace Demo.App.Server;
 
@@ -13,27 +12,29 @@ internal enum ScannerLoggerState
     Enabled,
 }
 
-[SignalRHub]
-public class DataHub(WorkerService workerService) : Hub
+internal class Worker(
+    IServiceProvider serviceProvider,
+    ILogger<Worker> logger,
+    IHubContext<LoggingHub> hubContext
+) : BackgroundService
 {
-    private readonly WorkerService _workerService = workerService;
-
-    public async Task SetLoggingEnabled(bool isEnabled)
-    {
-        _workerService.SetScannerLogging(isEnabled);
-        await Clients.All.SendAsync("LoggingStatusChanged", isEnabled);
-    }
-}
-
-// Worker Service
-public class WorkerService(ILogger<WorkerService> logger, IHubContext<DataHub> hubContext)
-    : BackgroundService
-{
-    private readonly ILogger<WorkerService> _logger = logger;
-    private readonly IHubContext<DataHub> _hubContext = hubContext;
+    private readonly IServiceProvider _serviceProvider = serviceProvider;
+    private readonly ILogger<Worker> _logger = logger;
+    private readonly IHubContext<LoggingHub> _loggingHubContext = hubContext;
 
     private ISystemConnector? _connector;
     private ScannerLogger? _scannerLogger;
+
+    private void InitializeScannerLogger(
+        ScannerLogger scannerLogger,
+        CancellationToken cancellationToken
+    )
+    {
+        scannerLogger.ReceivedAsync = async (message) =>
+        {
+            await _loggingHubContext.Clients.All.SendAsync("Logs", message, cancellationToken);
+        };
+    }
 
     private void Log(string message)
     {
@@ -85,18 +86,11 @@ public class WorkerService(ILogger<WorkerService> logger, IHubContext<DataHub> h
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        while (!stoppingToken.IsCancellationRequested)
-        {
-            await Task.Delay(5000, stoppingToken); // Simulate incoming event every 5 sec
+        using var scope = _serviceProvider.CreateScope();
 
-            if (_scannerLogger != null && _scannerLogger.Enabled)
-            {
-                await _hubContext.Clients.All.SendAsync(
-                    "Logs",
-                    $"New Event at {DateTime.UtcNow}",
-                    cancellationToken: stoppingToken
-                );
-            }
-        }
+        _scannerLogger = scope.ServiceProvider.GetRequiredService<ScannerLogger>();
+        InitializeScannerLogger(_scannerLogger, stoppingToken);
+
+        await Task.Delay(Timeout.Infinite, stoppingToken);
     }
 }

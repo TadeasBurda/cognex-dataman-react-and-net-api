@@ -1,4 +1,5 @@
 using Demo.App.Server;
+using Demo.App.Server.Hubs;
 using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -13,9 +14,8 @@ builder.Services.AddSwaggerGen(options =>
 });
 
 builder.Services.AddSignalR();
-builder.Services.AddSingleton<WorkerService>();
-builder.Services.AddSingleton<DataHub>();
-builder.Services.AddHostedService(provider => provider.GetRequiredService<WorkerService>());
+
+builder.Services.Configure();
 
 var app = builder.Build();
 
@@ -31,7 +31,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-app.MapHub<DataHub>("/dataHub");
+app.MapHub<LoggingHub>("/logging");
 
 app.MapFallbackToFile("/index.html");
 
