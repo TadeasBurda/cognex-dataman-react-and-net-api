@@ -35,26 +35,14 @@ internal class Worker(
 
     internal Func<string, Task>? SendLogMessageAsync { get; set; }
 
-    public void Connect(
-        bool autoReconnect,
-        IPAddress address,
-        int port,
-        string password,
-        bool runKeepAliveThread
-    )
+    private void ConnectInternal(bool autoReconnect, ISystemConnector systemConnector, bool runKeepAliveThread)
     {
         _autoReconnect = autoReconnect;
         _autoconnect = false;
 
         try
         {
-            var ethSystemConnector = new EthSystemConnector(address, port)
-            {
-                UserName = "admin",
-                Password = password,
-            };
-
-            _systemConnector = ethSystemConnector;
+            _systemConnector = systemConnector;
 
             _dataManSystem = new DataManSystem(_systemConnector) { DefaultTimeout = 5000 };
 
@@ -104,6 +92,23 @@ internal class Worker(
 
         _autoconnect = true;
         RefreshGui();
+    }
+
+    public void Connect(
+        bool autoReconnect,
+        IPAddress address,
+        int port,
+        string password,
+        bool runKeepAliveThread
+    )
+    {
+        var ethSystemConnector = new EthSystemConnector(address, port)
+        {
+            UserName = "admin",
+            Password = password,
+        };
+
+        ConnectInternal(autoReconnect, ethSystemConnector, runKeepAliveThread);
     }
 
     private void RefreshGui()
@@ -176,63 +181,9 @@ internal class Worker(
 
     public void Connect(bool autoReconnect, string portName, int baudrate, bool runKeepAliveThread)
     {
-        _autoReconnect = autoReconnect;
-        _autoconnect = false;
+        var serSystemConnector = new SerSystemConnector(portName, baudrate);
 
-        try
-        {
-            var serSystemConnector = new SerSystemConnector(portName, baudrate);
-
-            _systemConnector = serSystemConnector;
-
-            _dataManSystem = new DataManSystem(_systemConnector) { DefaultTimeout = 5000 };
-
-            // Subscribe to events that are signalled when the system is connected / disconnected.
-            _dataManSystem.SystemConnected += new SystemConnectedHandler(OnSystemConnected);
-            _dataManSystem.SystemDisconnected += new SystemDisconnectedHandler(
-                OnSystemDisconnected
-            );
-            _dataManSystem.SystemWentOnline += new SystemWentOnlineHandler(OnSystemWentOnline);
-            _dataManSystem.SystemWentOffline += new SystemWentOfflineHandler(OnSystemWentOffline);
-            _dataManSystem.KeepAliveResponseMissed += new KeepAliveResponseMissedHandler(
-                OnKeepAliveResponseMissed
-            );
-            _dataManSystem.BinaryDataTransferProgress += new BinaryDataTransferProgressHandler(
-                OnBinaryDataTransferProgress
-            );
-            _dataManSystem.OffProtocolByteReceived += new OffProtocolByteReceivedHandler(
-                OffProtocolByteReceived
-            );
-            _dataManSystem.AutomaticResponseArrived += new AutomaticResponseArrivedHandler(
-                AutomaticResponseArrived
-            );
-
-            // Subscribe to events that are signalled when the device sends auto-responses.
-            ResultTypes requested_result_types =
-                ResultTypes.ReadXml | ResultTypes.Image | ResultTypes.ImageGraphics;
-            _resultCollector = new ResultCollector(_dataManSystem, requested_result_types);
-            _resultCollector.ComplexResultCompleted += Results_ComplexResultCompleted;
-            _resultCollector.SimpleResultDropped += Results_SimpleResultDropped;
-
-            _dataManSystem.SetKeepAliveOptions(runKeepAliveThread, 3000, 1000);
-
-            _dataManSystem.Connect();
-
-            try
-            {
-                _dataManSystem.SetResultTypes(requested_result_types);
-            }
-            catch { }
-        }
-        catch (Exception ex)
-        {
-            CleanupConnection();
-
-            AddListItem("Failed to connect: " + ex.ToString());
-        }
-
-        _autoconnect = true;
-        RefreshGui();
+        ConnectInternal(autoReconnect, serSystemConnector, runKeepAliveThread);
     }
 
     private void InitializeScannerLogger(ScannerLogger scannerLogger)
