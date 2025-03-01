@@ -22,7 +22,7 @@ export default function Logging(): JSX.Element {
       .then(() => console.log("Connected to SignalR"))
       .catch(err => console.error("SignalR Connection Error: ", err));
 
-    connection.on("Logs", (message) => {
+    connection.on("ReceivedLogs", (message) => {
       setMessages(prev => [...prev, message]);
     });
 

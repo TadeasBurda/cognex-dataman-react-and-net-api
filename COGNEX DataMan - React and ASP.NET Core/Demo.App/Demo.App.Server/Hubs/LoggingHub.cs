@@ -4,9 +4,9 @@ namespace Demo.App.Server.Hubs;
 
 public interface ILoggingHub
 {
-    Task Logs(string message);
+    Task ReceivedLogs(string message);
 
-    Task ConnectLog(string message);
+    Task ConnectLogs(string message);
 }
 
 internal class LoggingHub : Hub<ILoggingHub>
@@ -23,31 +23,31 @@ internal class LoggingHub : Hub<ILoggingHub>
 
     private async Task SendKeepAliveResponseMissedAsync()
     {
-        await Clients.All.ConnectLog("Keep-alive response missed");
+        await Clients.All.ConnectLogs("Keep-alive response missed");
     }
 
     private async Task SendSystemWentOfflineAsync()
     {
-        await Clients.All.ConnectLog("System went offline");
+        await Clients.All.ConnectLogs("System went offline");
     }
 
     private async Task SendSystemWentOnlineAsync()
     {
-        await Clients.All.ConnectLog("System went online");
+        await Clients.All.ConnectLogs("System went online");
     }
 
     private async Task SendSystemDisconnectedAsync()
     {
-        await Clients.All.ConnectLog("System disconnected");
+        await Clients.All.ConnectLogs("System disconnected");
     }
 
     private async Task SendSystemConnectedAsync()
     {
-        await Clients.All.ConnectLog("System connected");
+        await Clients.All.ConnectLogs("System connected");
     }
 
     private async Task SendLogMessageAsync(string message)
     {
-        await Clients.All.Logs(message);
+        await Clients.All.ReceivedLogs(message);
     }
 }
