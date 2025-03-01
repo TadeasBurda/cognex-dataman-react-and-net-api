@@ -1,4 +1,4 @@
-import { FormConnect, Logging } from "./components";
+import { FormConnect, Logging, ShowImage } from "./components";
 
 function App() {
   return (
@@ -40,7 +40,8 @@ function App() {
               </label>
             </div>
           </section>
-          <div style={{ backgroundColor: 'var(--bs-secondary)' }}></div>
+          <ShowImage />
+          <p>lbReadString</p>
         </section>
       </section>
       <Logging  />

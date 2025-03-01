@@ -28,6 +28,8 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 app.MapHub<LoggingHub>("/logging");
+app.MapHub<ImageHub>("/image");
+app.MapHub<ScannerHub>("/scanner");
 
 app.AddScannerEndpoints();
 

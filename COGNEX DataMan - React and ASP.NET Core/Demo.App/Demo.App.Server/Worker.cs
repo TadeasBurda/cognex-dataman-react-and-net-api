@@ -1,5 +1,6 @@
 ﻿using System.Drawing;
 using System.Net;
+using System.Xml;
 using Cognex.DataMan.SDK;
 using Cognex.DataMan.SDK.Utils;
 using Demo.App.Server.Hubs;
@@ -21,6 +22,8 @@ internal class Worker(
     IHubContext<LoggingHub> hubContext
 ) : BackgroundService
 {
+    private static readonly SemaphoreSlim _semaphoreSlim = new(1, 1);
+
     private readonly IServiceProvider _serviceProvider = serviceProvider;
     private readonly ILogger<Worker> _logger = logger;
     private readonly IHubContext<LoggingHub> _loggingHubContext = hubContext;
@@ -35,6 +38,8 @@ internal class Worker(
 
     internal Func<string, Task>? SendLogMessageAsync { get; set; }
     internal Func<string, Task>? SendConnectLogMessageAsync { get; set; }
+    internal Func<string, Task>? SendScannerMessageAsync { get; set; }
+    internal Func<System.Drawing.Image, Task>? SendImageAsync { get; set; }
     internal Func<Task>? SendSystemConnectedAsync { get; set; }
     internal Func<Task>? SendSystemDisconnectedAsync { get; set; }
     internal Func<Task>? SendSystemWentOnlineAsync { get; set; }
@@ -98,106 +103,8 @@ internal class Worker(
             ResultTypes requested_result_types =
                 ResultTypes.ReadXml | ResultTypes.Image | ResultTypes.ImageGraphics;
             _resultCollector = new ResultCollector(_dataManSystem, requested_result_types);
-            _resultCollector.ComplexResultCompleted += (_, e) =>
-            {
-                List<Image> images = new List<Image>();
-                List<string> image_graphics = new List<string>();
-                string read_result = null;
-                int result_id = -1;
-                ResultTypes collected_results = ResultTypes.None;
-
-                // Take a reference or copy values from the locked result info object. This is done
-                // so that the lock is used only for a short period of time.
-                lock (_currentResultInfoSyncLock)
-                {
-                    foreach (var simple_result in e.SimpleResults)
-                    {
-                        collected_results |= simple_result.Id.Type;
-
-                        switch (simple_result.Id.Type)
-                        {
-                            case ResultTypes.Image:
-                                Image image = ImageArrivedEventArgs.GetImageFromImageBytes(
-                                    simple_result.Data
-                                );
-                                if (image != null)
-                                    images.Add(image);
-                                break;
-
-                            case ResultTypes.ImageGraphics:
-                                image_graphics.Add(simple_result.GetDataAsString());
-                                break;
-
-                            case ResultTypes.ReadXml:
-                                read_result = GetReadStringFromResultXml(
-                                    simple_result.GetDataAsString()
-                                );
-                                result_id = simple_result.Id.Id;
-                                break;
-
-                            case ResultTypes.ReadString:
-                                read_result = simple_result.GetDataAsString();
-                                result_id = simple_result.Id.Id;
-                                break;
-                        }
-                    }
-                }
-
-                AddListItem(
-                    string.Format(
-                        "Complex result arrived: resultId = {0}, read result = {1}",
-                        result_id,
-                        read_result
-                    )
-                );
-                Log("Complex result contains", string.Format("{0}", collected_results.ToString()));
-
-                if (images.Count > 0)
-                {
-                    Image first_image = images[0];
-
-                    Size image_size = Gui.FitImageInControl(first_image.Size, picResultImage.Size);
-                    Image fitted_image = Gui.ResizeImageToBitmap(first_image, image_size);
-
-                    if (image_graphics.Count > 0)
-                    {
-                        using (Graphics g = Graphics.FromImage(fitted_image))
-                        {
-                            foreach (var graphics in image_graphics)
-                            {
-                                ResultGraphics rg = GraphicsResultParser.Parse(
-                                    graphics,
-                                    new Rectangle(0, 0, image_size.Width, image_size.Height)
-                                );
-                                ResultGraphicsRenderer.PaintResults(g, rg);
-                            }
-                        }
-                    }
-
-                    if (picResultImage.Image != null)
-                    {
-                        var image = picResultImage.Image;
-                        picResultImage.Image = null;
-                        image.Dispose();
-                    }
-
-                    picResultImage.Image = fitted_image;
-                    picResultImage.Invalidate();
-                }
-
-                if (read_result != null)
-                    lbReadString.Text = read_result;
-            };
-            _resultCollector.SimpleResultDropped += (_, e) =>
-            {
-                SendConnectLogMessageAsync?.Invoke(
-                    string.Format(
-                        "Partial result dropped: {0}, id={1}",
-                        e.Id.Type.ToString(),
-                        e.Id.Id
-                    )
-                );
-            };
+            _resultCollector.ComplexResultCompleted += OnComplexResultCompleted;
+            _resultCollector.SimpleResultDropped += OnSimpleResultDropped;
 
             _dataManSystem.SetKeepAliveOptions(runKeepAliveThread, 3000, 1000);
 
@@ -237,7 +144,136 @@ internal class Worker(
         _dataManSystem = null;
     }
 
-    private void AutomaticResponseArrived(object sender, AutomaticResponseArrivedEventArgs args)
+    private void OnComplexResultCompleted(object _, ComplexResult e)
+    {
+        var images = new List<System.Drawing.Image>();
+        var image_graphics = new List<string>();
+        string? read_result = null;
+        var result_id = -1;
+        var collected_results = ResultTypes.None;
+
+        // Take a reference or copy values from the locked result info object. This is done
+        // so that the lock is used only for a short period of time.
+        _semaphoreSlim.Wait();
+        try
+        {
+            foreach (var simple_result in e.SimpleResults)
+            {
+                collected_results |= simple_result.Id.Type;
+
+                switch (simple_result.Id.Type)
+                {
+                    case ResultTypes.Image:
+                        var image = ImageArrivedEventArgs.GetImageFromImageBytes(
+                            simple_result.Data
+                        );
+                        if (image != null)
+                            images.Add(image);
+                        break;
+
+                    case ResultTypes.ImageGraphics:
+                        image_graphics.Add(simple_result.GetDataAsString());
+                        break;
+
+                    case ResultTypes.ReadXml:
+                        read_result = GetReadStringFromResultXml(simple_result.GetDataAsString());
+                        result_id = simple_result.Id.Id;
+                        break;
+
+                    case ResultTypes.ReadString:
+                        read_result = simple_result.GetDataAsString();
+                        result_id = simple_result.Id.Id;
+                        break;
+                }
+            }
+        }
+        finally
+        {
+            _semaphoreSlim.Release();
+        }
+
+        SendConnectLogMessageAsync?.Invoke(
+            string.Format(
+                "Complex result arrived: resultId = {0}, read result = {1}",
+                result_id,
+                e
+            )
+        );
+        Log("Complex result contains", string.Format("{0}", collected_results.ToString()));
+
+        if (images.Count > 0)
+        {
+            var first_image = images[0];
+
+            Size image_size = Gui.FitImageInControl(first_image.Size, new Size(400, 400));
+            var fitted_image = Gui.ResizeImageToBitmap(first_image, image_size);
+
+            if (image_graphics.Count > 0)
+            {
+                using (Graphics g = Graphics.FromImage(fitted_image))
+                {
+                    foreach (var graphics in image_graphics)
+                    {
+                        ResultGraphics rg = GraphicsResultParser.Parse(
+                            graphics,
+                            new Rectangle(0, 0, image_size.Width, image_size.Height)
+                        );
+                        ResultGraphicsRenderer.PaintResults(g, rg);
+                    }
+                }
+            }
+
+            SendImageAsync?.Invoke(fitted_image);
+        }
+
+        if (read_result != null)
+            SendScannerMessageAsync?.Invoke(read_result);
+    }
+
+    private string GetReadStringFromResultXml(string resultXml)
+    {
+        try
+        {
+            XmlDocument doc = new XmlDocument();
+
+            doc.LoadXml(resultXml);
+
+            XmlNode full_string_node = doc.SelectSingleNode("result/general/full_string");
+
+            if (full_string_node != null && _dataManSystem != null && _dataManSystem.State == ConnectionState.Connected)
+            {
+                XmlAttribute encoding = full_string_node.Attributes["encoding"];
+                if (encoding != null && encoding.InnerText == "base64")
+                {
+                    if (!string.IsNullOrEmpty(full_string_node.InnerText))
+                    {
+                        byte[] code = Convert.FromBase64String(full_string_node.InnerText);
+                        return _dataManSystem.Encoding.GetString(code, 0, code.Length);
+                    }
+                    else
+                    {
+                        return "";
+                    }
+                }
+
+                return full_string_node.InnerText;
+            }
+        }
+        catch
+        {
+        }
+
+        return "";
+    }
+
+    private void OnSimpleResultDropped(object _, SimpleResult e)
+    {
+        SendConnectLogMessageAsync?.Invoke(
+            string.Format("Partial result dropped: {0}, id={1}", e.Id.Type.ToString(), e.Id.Id)
+        );
+    }
+
+    private void AutomaticResponseArrived(object _, AutomaticResponseArrivedEventArgs args)
     {
         Log(
             "AutomaticResponseArrived",
@@ -250,12 +286,12 @@ internal class Worker(
         );
     }
 
-    private void OffProtocolByteReceived(object sender, OffProtocolByteReceivedEventArgs args)
+    private void OffProtocolByteReceived(object _, OffProtocolByteReceivedEventArgs args)
     {
         Log("OffProtocolByteReceived", string.Format("{0}", (char)args.Byte));
     }
 
-    private void OnBinaryDataTransferProgress(object sender, BinaryDataTransferProgressEventArgs args)
+    private void OnBinaryDataTransferProgress(object _, BinaryDataTransferProgressEventArgs args)
     {
         Log(
             "OnBinaryDataTransferProgress",
@@ -272,27 +308,27 @@ internal class Worker(
         );
     }
 
-    private void OnKeepAliveResponseMissed(object sender, EventArgs args)
+    private void OnKeepAliveResponseMissed(object _, EventArgs __)
     {
         SendKeepAliveResponseMissedAsync?.Invoke();
     }
 
-    private void OnSystemWentOffline(object sender, EventArgs args)
+    private void OnSystemWentOffline(object _, EventArgs __)
     {
         SendSystemWentOfflineAsync?.Invoke();
     }
 
-    private void OnSystemWentOnline(object sender, EventArgs args)
+    private void OnSystemWentOnline(object _, EventArgs __)
     {
         SendSystemWentOnlineAsync?.Invoke();
     }
 
-    private void OnSystemDisconnected(object sender, EventArgs args)
+    private void OnSystemDisconnected(object _, EventArgs __)
     {
         SendSystemDisconnectedAsync?.Invoke();
     }
 
-    private void OnSystemConnected(object sender, EventArgs args)
+    private void OnSystemConnected(object _, EventArgs __)
     {
         SendSystemConnectedAsync?.Invoke();
     }
