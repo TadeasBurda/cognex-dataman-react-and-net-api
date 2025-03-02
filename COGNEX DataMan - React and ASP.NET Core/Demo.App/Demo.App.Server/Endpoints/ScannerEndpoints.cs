@@ -42,7 +42,7 @@ internal static class ScannerEndpoints
                     runKeepAliveThread: body.RunKeepAliveThread
                 );
             }
-        ).DisableAntiforgery();
+        );
         app.MapPost(
             "/api/scanner/connect/ser",
             (SerSystemConnectorRequest body, Worker worker) =>
@@ -54,7 +54,7 @@ internal static class ScannerEndpoints
                     runKeepAliveThread: body.RunKeepAliveThread
                 );
             }
-        ).DisableAntiforgery();
+        );
         return app;
     }
 }

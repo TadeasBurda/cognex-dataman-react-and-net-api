@@ -1,28 +1,14 @@
 import { HubConnectionBuilder } from "@microsoft/signalr";
 import { useMutation } from "@tanstack/react-query";
 import { JSX, useEffect, useState } from "react";
+import { EthSystemConnector, SerSystemConnector } from ".";
 import { postRefreshScannersList } from "../api";
-
-interface Connector {
-  name: string;
-  serialNumber: string;
-}
-
-interface EthSystemConnector extends Connector {
-  ipAddress: string;
-  port: number;
-};
-
-interface SerSystemConnector extends Connector {
-  portName: string;
-  baudrate: number;
-}
 
 interface Props {
   disabled: boolean;
   onClick: (e: EthSystemConnector | SerSystemConnector) => void;
 }
-export default function DevicesList(props: Readonly<Props>): JSX.Element {
+export default function ScannersList(props: Readonly<Props>): JSX.Element {
   const { disabled, onClick } = props;
 
   const [messages, setMessages] = useState<Array<EthSystemConnector | SerSystemConnector>>([]);

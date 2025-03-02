@@ -14,18 +14,14 @@ interface PostScannnerConnectEthBody {
   autoReconnect: boolean;
 }
 export async function postScannerConnectEth(
-  props: Readonly<PostScannnerConnectEthBody>,
+  body: Readonly<PostScannnerConnectEthBody>,
 ): Promise<void> {
-  const fromBody = new FormData();
-  fromBody.append("ipAddress", props.ipAddress);
-  fromBody.append("port", props.port.toString());
-  fromBody.append("password", props.password);
-  fromBody.append("runKeepAliveThread", props.runKeepAliveThread.toString());
-  fromBody.append("autoReconnect", props.autoReconnect.toString());
-
   await fetch("/api/scanner/connect/eth", {
     method: "POST",
-    body: fromBody,
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
   });
 }
 
@@ -37,18 +33,14 @@ interface PostScannnerConnectSerBody {
   autoReconnect: boolean;
 }
 export async function postScannerConnectSer(
-  props: Readonly<PostScannnerConnectSerBody>,
+  body: Readonly<PostScannnerConnectSerBody>,
 ): Promise<void> {
-  const fromBody = new FormData();
-  fromBody.append("portName", props.portName);
-  fromBody.append("baudrate", props.baudrate.toString());
-  fromBody.append("password", props.password);
-  fromBody.append("runKeepAliveThread", props.runKeepAliveThread.toString());
-  fromBody.append("autoReconnect", props.autoReconnect.toString());
-
-  await fetch("/api/scanner/connect/eth", {
+  await fetch("/api/scanner/connect/ser", {
     method: "POST",
-    body: fromBody,
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
   });
 }
 
