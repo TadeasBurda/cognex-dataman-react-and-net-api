@@ -1,0 +1,8 @@
+﻿namespace Demo.App.Server.Models;
+
+public abstract class Connector
+{
+    public required string Name { get; init; }
+
+    public required string SerialNumber { get; init; }
+}

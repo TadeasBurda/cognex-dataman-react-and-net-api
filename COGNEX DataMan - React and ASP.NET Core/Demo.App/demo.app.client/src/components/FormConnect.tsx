@@ -31,10 +31,6 @@ export default function FormConnect(): JSX.Element {
     },
   });
 
-  const refreshMutation = useMutation({
-    mutationFn: postRefreshScannersList,
-  });
-
   const connectMutation = useMutation({
     mutationFn: postScannerConnect,
     onSuccess: () => {

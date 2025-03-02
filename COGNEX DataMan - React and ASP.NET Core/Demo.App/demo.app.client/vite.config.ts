@@ -67,6 +67,18 @@ export default defineConfig({
         secure: false,
         changeOrigin: true,
       },
+      "^/image": {
+        target,
+        ws: true,
+        secure: false,
+        changeOrigin: true,
+      },
+      "^/scanner": {
+        target,
+        ws: true,
+        secure: false,
+        changeOrigin: true,
+      },
     },
     port: parseInt(env.DEV_SERVER_PORT || "61046"),
     https: {

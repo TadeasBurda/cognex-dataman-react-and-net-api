@@ -1,12 +1,12 @@
-﻿using System.Drawing;
-using System.Net;
-using System.Xml;
-using Cognex.DataMan.SDK;
+﻿using Cognex.DataMan.SDK;
 using Cognex.DataMan.SDK.Utils;
 using Demo.App.Server.Hubs;
+using Demo.App.Server.Models;
 using Demo.App.Server.Services;
 using Microsoft.AspNetCore.SignalR;
-using static System.Net.Mime.MediaTypeNames;
+using System.Drawing;
+using System.Net;
+using System.Xml;
 
 namespace Demo.App.Server;
 
@@ -39,6 +39,7 @@ internal class Worker(
     internal Func<string, Task>? SendLogMessageAsync { get; set; }
     internal Func<string, Task>? SendConnectLogMessageAsync { get; set; }
     internal Func<string, Task>? SendScannerMessageAsync { get; set; }
+    internal Func<Connector[], Task>? SendListConnectorsAsync { get; set; }
     internal Func<System.Drawing.Image, Task>? SendImageAsync { get; set; }
     internal Func<Task>? SendSystemConnectedAsync { get; set; }
     internal Func<Task>? SendSystemDisconnectedAsync { get; set; }
