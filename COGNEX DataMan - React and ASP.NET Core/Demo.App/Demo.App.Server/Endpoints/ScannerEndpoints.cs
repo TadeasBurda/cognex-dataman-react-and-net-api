@@ -3,8 +3,6 @@ using System.Runtime.Versioning;
 
 namespace Demo.App.Server.Endpoints;
 
-internal sealed record ScannerNotInitResponse(string Status = "Scanner is not initialized.");
-
 internal sealed record EthSystemConnectorRequest
 {
     internal required string IpAddress { get; init; }
@@ -33,7 +31,7 @@ internal static class ScannerEndpoints
             {
                 if (worker.Scanner == null)
                 {
-                    return Results.BadRequest(new ScannerNotInitResponse());
+                    return Results.Problem("Scanner is not initialized.");
                 }
                 worker.Scanner.SetScannerLogging(enable);
                 return Results.Ok();
@@ -45,7 +43,7 @@ internal static class ScannerEndpoints
             {
                 if (worker.Scanner == null)
                 {
-                    return Results.BadRequest(new ScannerNotInitResponse());
+                    return Results.Problem("Scanner is not initialized.");
                 }
                 worker.Scanner.SetLiveDisplay(enable);
                 return Results.Ok();
@@ -57,7 +55,7 @@ internal static class ScannerEndpoints
             {
                 if (worker.Scanner == null)
                 {
-                    return Results.BadRequest(new ScannerNotInitResponse());
+                    return Results.Problem("Scanner is not initialized.");
                 }
                 if (on)
                 {
@@ -76,7 +74,7 @@ internal static class ScannerEndpoints
             {
                 if (worker.Scanner == null)
                 {
-                    return Results.BadRequest(new ScannerNotInitResponse());
+                    return Results.Problem("Scanner is not initialized.");
                 }
                 worker.Scanner.Connect(
                     autoReconnect: body.AutoReconnect,
@@ -94,7 +92,7 @@ internal static class ScannerEndpoints
             {
                 if (worker.Scanner == null)
                 {
-                    return Results.BadRequest(new ScannerNotInitResponse());
+                    return Results.Problem("Scanner is not initialized.");
                 }
                 worker.Scanner.Connect(
                     autoReconnect: body.AutoReconnect,
@@ -111,7 +109,7 @@ internal static class ScannerEndpoints
             {
                 if (worker.Scanner == null)
                 {
-                    return Results.BadRequest(new ScannerNotInitResponse());
+                    return Results.Problem("Scanner is not initialized.");
                 }
                 worker.Scanner.Disconnect();
                 return Results.Ok();
