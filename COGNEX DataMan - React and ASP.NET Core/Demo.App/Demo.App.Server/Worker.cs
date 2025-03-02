@@ -1,5 +1,10 @@
 ﻿// TODO: Add dispose method to cleanup resources
 
+using System.Drawing;
+using System.IO.Pipelines;
+using System.Net;
+using System.Runtime.Versioning;
+using System.Xml;
 using Cognex.DataMan.SDK;
 using Cognex.DataMan.SDK.Discovery;
 using Cognex.DataMan.SDK.Utils;
@@ -7,10 +12,6 @@ using Demo.App.Server.Hubs;
 using Demo.App.Server.Models;
 using Demo.App.Server.Services;
 using Microsoft.AspNetCore.SignalR;
-using System.Drawing;
-using System.IO.Pipelines;
-using System.Net;
-using System.Xml;
 
 namespace Demo.App.Server;
 
@@ -36,6 +37,7 @@ internal class Worker(
 
     private bool _autoReconnect = false;
     private bool _autoconnect = false;
+    private bool _liveDisplay = false;
 
     private ISystemConnector? _systemConnector;
     private ScannerLogger? _scannerLogger;
@@ -200,11 +202,7 @@ internal class Worker(
         }
 
         SendConnectLogMessageAsync?.Invoke(
-            string.Format(
-                "Complex result arrived: resultId = {0}, read result = {1}",
-                result_id,
-                e
-            )
+            string.Format("Complex result arrived: resultId = {0}, read result = {1}", result_id, e)
         );
         Log("Complex result contains", string.Format("{0}", collected_results.ToString()));
 
@@ -247,7 +245,11 @@ internal class Worker(
 
             XmlNode full_string_node = doc.SelectSingleNode("result/general/full_string");
 
-            if (full_string_node != null && _dataManSystem != null && _dataManSystem.State == ConnectionState.Connected)
+            if (
+                full_string_node != null
+                && _dataManSystem != null
+                && _dataManSystem.State == ConnectionState.Connected
+            )
             {
                 XmlAttribute encoding = full_string_node.Attributes["encoding"];
                 if (encoding != null && encoding.InnerText == "base64")
@@ -266,9 +268,7 @@ internal class Worker(
                 return full_string_node.InnerText;
             }
         }
-        catch
-        {
-        }
+        catch { }
 
         return "";
     }
@@ -366,7 +366,71 @@ internal class Worker(
         _scannerLogger.Log(function, message);
     }
 
-    public void SetScannerLogging(bool isEnabled)
+    internal void SetLiveDisplay(bool isEnabled)
+    {
+        if (_dataManSystem == null)
+        {
+            _logger.LogWarning("DataManSystem is not initialized");
+            return;
+        }
+
+        _liveDisplay = isEnabled;
+
+        try
+        {
+            if (_liveDisplay)
+            {
+                _dataManSystem.SendCommand("SET LIVEIMG.MODE 2");
+                _dataManSystem.BeginGetLiveImage(
+                    ImageFormat.jpeg,
+                    ImageSize.Sixteenth,
+                    ImageQuality.Medium,
+                    OnLiveImageArrived,
+                    null
+                );
+            }
+            else
+            {
+                _dataManSystem.SendCommand("SET LIVEIMG.MODE 0");
+            }
+        }
+        catch (Exception ex)
+        {
+            Log(nameof(SetLiveDisplay), "Failed to set live image mode: " + ex.ToString());
+        }
+    }
+
+    [SupportedOSPlatform("windows")]
+    private void OnLiveImageArrived(IAsyncResult result)
+    {
+        if (_dataManSystem == null)
+        {
+            _logger.LogWarning("DataManSystem is not initialized");
+            return;
+        }
+
+        try
+        {
+            Image image = _dataManSystem.EndGetLiveImage(result);
+            Size image_size = Gui.FitImageInControl(image.Size, new Size(400, 400));
+            Image fitted_image = Gui.ResizeImageToBitmap(image, image_size);
+            SendImageAsync?.Invoke(fitted_image);
+
+            if (_liveDisplay)
+            {
+                _dataManSystem.BeginGetLiveImage(
+                    ImageFormat.jpeg,
+                    ImageSize.Sixteenth,
+                    ImageQuality.Medium,
+                    OnLiveImageArrived,
+                    null
+                );
+            }
+        }
+        catch { }
+    }
+
+    internal void SetScannerLogging(bool isEnabled)
     {
         if (_systemConnector == null)
         {
@@ -405,7 +469,9 @@ internal class Worker(
 
     internal void Refresh()
     {
-        if (_ethSystemDiscoverer.IsDiscoveryInProgress || _serSystemDiscoverer.IsDiscoveryInProgress)
+        if (
+            _ethSystemDiscoverer.IsDiscoveryInProgress || _serSystemDiscoverer.IsDiscoveryInProgress
+        )
             return;
 
         _ethSystemDiscoverer.Discover();
@@ -432,7 +498,7 @@ internal class Worker(
         }
         catch (Exception ex)
         {
-            Log( nameof(TriggerOn), "Failed to send TRIGGER OFF command: " + ex.ToString());
+            Log(nameof(TriggerOn), "Failed to send TRIGGER OFF command: " + ex.ToString());
         }
     }
 
@@ -445,23 +511,27 @@ internal class Worker(
 
         _ethSystemDiscoverer.SystemDiscovered += (e) =>
         {
-            SendDiscoveredConnectorAsync?.Invoke(new Demo.App.Server.Models.EthSystemConnector()
-            {
-                IpAddress = e.IPAddress.ToString(),
-                Name = e.Name,
-                Port = e.Port,
-                SerialNumber = e.SerialNumber
-            });
+            SendDiscoveredConnectorAsync?.Invoke(
+                new Demo.App.Server.Models.EthSystemConnector()
+                {
+                    IpAddress = e.IPAddress.ToString(),
+                    Name = e.Name,
+                    Port = e.Port,
+                    SerialNumber = e.SerialNumber,
+                }
+            );
         };
         _serSystemDiscoverer.SystemDiscovered += (e) =>
         {
-            SendDiscoveredConnectorAsync?.Invoke(new Demo.App.Server.Models.SerSystemConnector()
-            {
-                Baudrate = e.Baudrate,
-                Name = e.Name,
-                PortName = e.PortName,
-                SerialNumber = e.SerialNumber
-            });
+            SendDiscoveredConnectorAsync?.Invoke(
+                new Demo.App.Server.Models.SerSystemConnector()
+                {
+                    Baudrate = e.Baudrate,
+                    Name = e.Name,
+                    PortName = e.PortName,
+                    SerialNumber = e.SerialNumber,
+                }
+            );
         };
 
         _ethSystemDiscoverer.Discover();

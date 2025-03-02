@@ -12,6 +12,14 @@ export async function postScannerLoggingEnabled(
   });
 }
 
+export async function postScannerLiveDisplayEnabled(
+  enable: boolean,
+): Promise<void> {
+  await fetch(`/api/scanner/live-display?enable=${enable}`, {
+    method: "POST",
+  });
+}
+
 interface PostScannnerConnectEthBody {
   ipAddress: string;
   port: number;

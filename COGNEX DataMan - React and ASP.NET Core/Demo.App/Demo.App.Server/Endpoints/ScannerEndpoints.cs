@@ -31,6 +31,13 @@ internal static class ScannerEndpoints
             }
         );
         app.MapPost(
+            "/api/scanner/live-display",
+            (bool enable, Worker worker) =>
+            {
+                worker.SetLiveDisplay(enable);
+            }
+        );
+        app.MapPost(
             "/api/scanner/trigger",
             (bool on, Worker worker) =>
             {

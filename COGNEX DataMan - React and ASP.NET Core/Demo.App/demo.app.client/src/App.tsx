@@ -1,9 +1,11 @@
 import {
-  ButtonTrigger,
-  FormConnect,
-  ReceivedLogs,
-  ShowImage,
-  ShowReceivedString,
+    ButtonTrigger,
+    FormConnect,
+    LiveDisplay,
+    LiveDisplayProvider,
+    ReceivedLogs,
+    ShowImage,
+    ShowReceivedString,
 } from "./components";
 
 function App() {
@@ -36,17 +38,10 @@ function App() {
             className="d-grid align-items-center"
             style={{ gridTemplateColumns: "1fr 1fr", columnGap: "0.75rem" }}
           >
-            <ButtonTrigger />
-            <div className="form-check m-0">
-              <input
-                id="formCheck-2"
-                className="form-check-input"
-                type="checkbox"
-              />
-              <label className="form-check-label" htmlFor="formCheck-2">
-                Live Display
-              </label>
-            </div>
+            <LiveDisplayProvider>
+              <ButtonTrigger />
+              <LiveDisplay />
+            </LiveDisplayProvider>
           </section>
           <ShowImage />
           <ShowReceivedString />

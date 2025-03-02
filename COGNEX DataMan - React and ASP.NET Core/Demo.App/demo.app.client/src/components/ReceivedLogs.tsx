@@ -1,4 +1,5 @@
 import { HubConnectionBuilder } from "@microsoft/signalr";
+import { useMutation } from "@tanstack/react-query";
 import { JSX, useEffect, useState } from "react";
 import { postScannerLoggingEnabled } from "../api";
 
@@ -6,13 +7,10 @@ export default function ReceivedLogs(): JSX.Element {
   const [loggingEnabled, setLoggingEnabled] = useState(false);
   const [messages, setMessages] = useState<string[]>([]);
 
-  const handleCheckboxChange = async (
-    event: React.ChangeEvent<HTMLInputElement>,
-  ) => {
-    const isChecked = event.target.checked;
-    setLoggingEnabled(isChecked);
-    postScannerLoggingEnabled(isChecked);
-  };
+  const scannerLoggingEnabledMutation = useMutation({
+    mutationFn: postScannerLoggingEnabled,
+  });
+  const { isPending } = scannerLoggingEnabledMutation;
 
   useEffect(() => {
     const connection = new HubConnectionBuilder()
@@ -50,6 +48,7 @@ export default function ReceivedLogs(): JSX.Element {
           type="checkbox"
           checked={loggingEnabled}
           onChange={handleCheckboxChange}
+          disabled={isPending}
         />
         <label className="form-check-label" htmlFor="inputLoggingEnabled">
           Logging enabled
@@ -58,4 +57,10 @@ export default function ReceivedLogs(): JSX.Element {
       <textarea readOnly value={messages.join("\n")}></textarea>
     </section>
   );
+
+  function handleCheckboxChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const isChecked = event.target.checked;
+    setLoggingEnabled(isChecked);
+    scannerLoggingEnabledMutation.mutate(isChecked);
+  }
 }
