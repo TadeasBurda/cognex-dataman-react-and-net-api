@@ -10,9 +10,10 @@ export default function ShowImage(): JSX.Element {
       .withAutomaticReconnect()
       .build();
 
-    connection.start()
+    connection
+      .start()
       .then(() => console.log("Connected to SignalR"))
-      .catch(err => console.error("SignalR Connection Error: ", err));
+      .catch((err) => console.error("SignalR Connection Error: ", err));
 
     connection.on("ReceivedLogs", (base64Image) => {
       setImageSrc(`data:image/png;base64,${base64Image}`);

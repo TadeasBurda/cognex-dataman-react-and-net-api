@@ -6,25 +6,29 @@ function App() {
       <section
         className="d-grid"
         style={{
-          overflowY: 'auto',
-          gridTemplateColumns: '1fr 1fr',
-          columnGap: '0.75rem',
+          overflowY: "auto",
+          gridTemplateColumns: "1fr 1fr",
+          columnGap: "0.75rem",
         }}
       >
         <section
           className="d-grid"
-          style={{ overflowY: 'auto', gridTemplateRows: '2fr 1fr' }}
+          style={{ overflowY: "auto", gridTemplateRows: "2fr 1fr" }}
         >
           <FormConnect />
           <textarea readOnly></textarea>
         </section>
         <section
           className="d-grid"
-          style={{ overflowY: 'auto', gridTemplateRows: 'auto 1fr', rowGap: '0.75rem' }}
+          style={{
+            overflowY: "auto",
+            gridTemplateRows: "auto 1fr",
+            rowGap: "0.75rem",
+          }}
         >
           <section
             className="d-grid align-items-center"
-            style={{ gridTemplateColumns: '1fr 1fr', columnGap: '0.75rem' }}
+            style={{ gridTemplateColumns: "1fr 1fr", columnGap: "0.75rem" }}
           >
             <button className="btn btn-primary w-100" type="button">
               Trigger
@@ -44,7 +48,7 @@ function App() {
           <p>lbReadString</p>
         </section>
       </section>
-      <Logging  />
+      <Logging />
     </>
   );
 }

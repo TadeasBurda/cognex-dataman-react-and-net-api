@@ -6,7 +6,9 @@ export default function ReceivedLogs(): JSX.Element {
   const [loggingEnabled, setLoggingEnabled] = useState(false);
   const [messages, setMessages] = useState<string[]>([]);
 
-  const handleCheckboxChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCheckboxChange = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const isChecked = event.target.checked;
     setLoggingEnabled(isChecked);
     postScannerLoggingEnabled(isChecked);
@@ -18,12 +20,13 @@ export default function ReceivedLogs(): JSX.Element {
       .withAutomaticReconnect()
       .build();
 
-    connection.start()
+    connection
+      .start()
       .then(() => console.log("Connected to SignalR"))
-      .catch(err => console.error("SignalR Connection Error: ", err));
+      .catch((err) => console.error("SignalR Connection Error: ", err));
 
     connection.on("ReceivedLogs", (message) => {
-      setMessages(prev => [...prev, message]);
+      setMessages((prev) => [...prev, message]);
     });
 
     return () => {
@@ -34,7 +37,11 @@ export default function ReceivedLogs(): JSX.Element {
   return (
     <section
       className="d-grid"
-      style={{ overflowY: 'auto', gridTemplateRows: 'auto 1fr', rowGap: '0.75rem' }}
+      style={{
+        overflowY: "auto",
+        gridTemplateRows: "auto 1fr",
+        rowGap: "0.75rem",
+      }}
     >
       <div className="form-check">
         <input
@@ -48,7 +55,7 @@ export default function ReceivedLogs(): JSX.Element {
           Logging enabled
         </label>
       </div>
-      <textarea readOnly value={messages.join('\n')}></textarea>
+      <textarea readOnly value={messages.join("\n")}></textarea>
     </section>
   );
 }

@@ -10,12 +10,13 @@ export default function ConnectLogs(): JSX.Element {
       .withAutomaticReconnect()
       .build();
 
-    connection.start()
+    connection
+      .start()
       .then(() => console.log("Connected to SignalR"))
-      .catch(err => console.error("SignalR Connection Error: ", err));
+      .catch((err) => console.error("SignalR Connection Error: ", err));
 
     connection.on("ConnectLogs", (message) => {
-      setMessages(prev => [...prev, message]);
+      setMessages((prev) => [...prev, message]);
     });
 
     return () => {
@@ -23,5 +24,5 @@ export default function ConnectLogs(): JSX.Element {
     };
   }, []);
 
-  return (<textarea readOnly value={messages.join('\n')}></textarea>);
+  return <textarea readOnly value={messages.join("\n")}></textarea>;
 }

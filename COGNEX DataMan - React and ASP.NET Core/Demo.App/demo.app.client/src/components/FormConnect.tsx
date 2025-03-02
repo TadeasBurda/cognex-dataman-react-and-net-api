@@ -3,7 +3,11 @@
 import { useMutation } from "@tanstack/react-query";
 import { JSX, useMemo } from "react";
 import { useForm } from "react-hook-form";
-import { postRefreshScannersList, postScannerConnect, postScannerDisconnect } from "../api";
+import {
+  postRefreshScannersList,
+  postScannerConnect,
+  postScannerDisconnect,
+} from "../api";
 
 type Inputs = {
   device: string;
@@ -13,7 +17,12 @@ type Inputs = {
 };
 
 export default function FormConnect(): JSX.Element {
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<Inputs>();
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<Inputs>();
 
   const disconnectMutation = useMutation({
     mutationFn: postScannerDisconnect,
@@ -34,8 +43,16 @@ export default function FormConnect(): JSX.Element {
   });
 
   const isPending = useMemo(() => {
-    return disconnectMutation.isPending || refreshMutation.isPending || connectMutation.isPending;
-  }, [disconnectMutation.isPending, refreshMutation.isPending, connectMutation.isPending]);
+    return (
+      disconnectMutation.isPending ||
+      refreshMutation.isPending ||
+      connectMutation.isPending
+    );
+  }, [
+    disconnectMutation.isPending,
+    refreshMutation.isPending,
+    connectMutation.isPending,
+  ]);
 
   const onSubmit = (data: Inputs) => {
     connectMutation.mutate(data);
@@ -46,9 +63,9 @@ export default function FormConnect(): JSX.Element {
       id="formConnect"
       className="d-grid"
       style={{
-        overflowY: 'auto',
-        gridTemplateColumns: '1fr 1fr',
-        gap: '0.75rem',
+        overflowY: "auto",
+        gridTemplateColumns: "1fr 1fr",
+        gap: "0.75rem",
       }}
       onSubmit={handleSubmit(onSubmit)}
     >
@@ -152,9 +169,9 @@ export default function FormConnect(): JSX.Element {
       </fieldset>
       <fieldset
         className="d-flex flex-column p-1"
-        style={{ overflowY: 'auto' }}
+        style={{ overflowY: "auto" }}
       >
-        <div className="flex-fill mb-3" style={{ overflowY: 'auto' }}>
+        <div className="flex-fill mb-3" style={{ overflowY: "auto" }}>
           <div className="list-group list-group-flush">
             <button
               type="button"

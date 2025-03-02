@@ -1,2 +1,2 @@
-export * from './scannerAPI';
-export * from './scannersAPI';
+export * from "./scannerAPI";
+export * from "./scannersAPI";
