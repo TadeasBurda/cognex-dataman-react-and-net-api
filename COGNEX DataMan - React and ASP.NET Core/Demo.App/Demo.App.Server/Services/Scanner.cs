@@ -7,6 +7,12 @@ using System.Xml;
 
 namespace Demo.App.Server.Services;
 
+internal enum ScannerLoggerState
+{
+    Disabled,
+    Enabled,
+}
+
 internal sealed class Scanner : IDisposable
 {
     #region Fields

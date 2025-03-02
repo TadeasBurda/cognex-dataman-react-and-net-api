@@ -1,27 +1,42 @@
-﻿// TODO: Add dispose method to cleanup resources
-
-using Cognex.DataMan.SDK.Discovery;
+﻿using Cognex.DataMan.SDK.Discovery;
 using Demo.App.Server.Models;
 using Demo.App.Server.Services;
 
 namespace Demo.App.Server;
 
-internal enum ScannerLoggerState
+internal sealed class Worker(IServiceProvider serviceProvider, ILogger<Worker> logger) : BackgroundService
 {
-    Disabled,
-    Enabled,
-}
+    #region Fields
 
-internal class Worker(IServiceProvider serviceProvider) : BackgroundService
-{
     private readonly IServiceProvider _serviceProvider = serviceProvider;
+    private readonly ILogger<Worker> _logger = logger;
 
     private readonly EthSystemDiscoverer _ethSystemDiscoverer = new();
     private readonly SerSystemDiscoverer _serSystemDiscoverer = new();
 
+    #endregion
+
+    #region Events
+
     internal Func<Connector, Task>? SendDiscoveredConnectorAsync { get; set; }
 
-    internal Scanner? Scanner { get; private set;  }
+    #endregion
+
+    #region Properties
+
+    internal Scanner? Scanner { get; private set; }
+
+    #endregion
+
+    public override void Dispose()
+    {
+        base.Dispose();
+
+        _ethSystemDiscoverer.Dispose();
+        _serSystemDiscoverer.Dispose();
+
+        Scanner?.Dispose();
+    }
 
     internal void Refresh()
     {
@@ -38,37 +53,62 @@ internal class Worker(IServiceProvider serviceProvider) : BackgroundService
     {
         using var scope = _serviceProvider.CreateScope();
 
-        var scanner = scope.ServiceProvider.GetRequiredService<Scanner>();
-        Scanner = scanner;
+        Scanner = scope.ServiceProvider.GetRequiredService<Scanner>();
 
-        _ethSystemDiscoverer.SystemDiscovered += (e) =>
+        InitializeEthSystemDiscoverer();
+        InitializeSerSystemDiscoverer();
+
+        try
         {
-            SendDiscoveredConnectorAsync?.Invoke(
-                new EthSystemConnector()
-                {
-                    IpAddress = e.IPAddress.ToString(),
-                    Name = e.Name,
-                    Port = e.Port,
-                    SerialNumber = e.SerialNumber,
-                }
-            );
-        };
-        _serSystemDiscoverer.SystemDiscovered += (e) =>
+            await Task.Delay(Timeout.Infinite, stoppingToken);
+        }
+        catch (TaskCanceledException)
         {
-            SendDiscoveredConnectorAsync?.Invoke(
-                new SerSystemConnector()
-                {
-                    Baudrate = e.Baudrate,
-                    Name = e.Name,
-                    PortName = e.PortName,
-                    SerialNumber = e.SerialNumber,
-                }
-            );
-        };
-
-        _ethSystemDiscoverer.Discover();
-        _serSystemDiscoverer.Discover();
-
-        await Task.Delay(Timeout.Infinite, stoppingToken);
+            // Task was canceled, no action needed
+        }
     }
+
+    #region Helpers
+
+    private void InitializeEthSystemDiscoverer()
+    {
+        _ethSystemDiscoverer.SystemDiscovered += async (e) =>
+        {
+            if (SendDiscoveredConnectorAsync != null)
+            {
+                await SendDiscoveredConnectorAsync(
+                    new EthSystemConnector
+                    {
+                        IpAddress = e.IPAddress.ToString(),
+                        Name = e.Name,
+                        Port = e.Port,
+                        SerialNumber = e.SerialNumber,
+                    }
+                );
+            }
+        };
+        _ethSystemDiscoverer.Discover();
+    }
+
+    private void InitializeSerSystemDiscoverer()
+    {
+        _serSystemDiscoverer.SystemDiscovered += async (e) =>
+        {
+            if (SendDiscoveredConnectorAsync != null)
+            {
+                await SendDiscoveredConnectorAsync(
+                    new SerSystemConnector
+                    {
+                        Baudrate = e.Baudrate,
+                        Name = e.Name,
+                        PortName = e.PortName,
+                        SerialNumber = e.SerialNumber,
+                    }
+                );
+            }
+        };
+        _serSystemDiscoverer.Discover();
+    }
+
+    #endregion
 }
