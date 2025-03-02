@@ -29,7 +29,7 @@ export default function ScannersList(props: Readonly<Props>): JSX.Element {
       .then(() => console.log("Connected to SignalR"))
       .catch((err) => console.error("SignalR Connection Error: ", err));
 
-    connection.on("List", (message) => {
+    connection.on("Discovered", (message) => {
       setMessages((prev) => [...prev, JSON.parse(message)]);
     });
 
@@ -61,7 +61,7 @@ export default function ScannersList(props: Readonly<Props>): JSX.Element {
         <button
           className="btn btn-primary w-100"
           type="button"
-          onClick={() => refreshMutation.mutate()}
+          onClick={handleRefresh}
           disabled={disabled || isPending}
         >
           Refresh
@@ -69,4 +69,9 @@ export default function ScannersList(props: Readonly<Props>): JSX.Element {
       </div>
     </fieldset>
   );
+
+  function handleRefresh() {
+    messages.length = 0;
+    refreshMutation.mutate();
+  }
 }

@@ -7,7 +7,7 @@ public interface IScannerHub
 {
     Task Received(string message);
 
-    Task List(Connector[] connectors);
+    Task Discovered(Connector connector);
 }
 
 internal class ScannerHub : Hub<IScannerHub>
@@ -15,12 +15,12 @@ internal class ScannerHub : Hub<IScannerHub>
     public ScannerHub(Worker worker)
     {
         worker.SendScannerMessageAsync = SendScannerMessageAsync;
-        worker.SendListConnectorsAsync = SendListConnectorsAsync;
+        worker.SendDiscoveredConnectorAsync = SendDiscoveredConnectorAsync;
     }
 
-    private async Task SendListConnectorsAsync(Connector[] connectors)
+    private async Task SendDiscoveredConnectorAsync(Connector connector)
     {
-        await Clients.All.List(connectors);
+        await Clients.All.Discovered(connector);
     }
 
     private async Task SendScannerMessageAsync(string message)

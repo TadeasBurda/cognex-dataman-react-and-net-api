@@ -1,4 +1,7 @@
-﻿using Cognex.DataMan.SDK;
+﻿// TODO: Add dispose method to cleanup resources
+
+using Cognex.DataMan.SDK;
+using Cognex.DataMan.SDK.Discovery;
 using Cognex.DataMan.SDK.Utils;
 using Demo.App.Server.Hubs;
 using Demo.App.Server.Models;
@@ -27,6 +30,8 @@ internal class Worker(
     private readonly IServiceProvider _serviceProvider = serviceProvider;
     private readonly ILogger<Worker> _logger = logger;
     private readonly IHubContext<LoggingHub> _loggingHubContext = hubContext;
+    private readonly EthSystemDiscoverer _ethSystemDiscoverer = new();
+    private readonly SerSystemDiscoverer _serSystemDiscoverer = new();
 
     private bool _autoReconnect = false;
     private bool _autoconnect = false;
@@ -39,7 +44,7 @@ internal class Worker(
     internal Func<string, Task>? SendLogMessageAsync { get; set; }
     internal Func<string, Task>? SendConnectLogMessageAsync { get; set; }
     internal Func<string, Task>? SendScannerMessageAsync { get; set; }
-    internal Func<Connector[], Task>? SendListConnectorsAsync { get; set; }
+    internal Func<Connector, Task>? SendDiscoveredConnectorAsync { get; set; }
     internal Func<System.Drawing.Image, Task>? SendImageAsync { get; set; }
     internal Func<Task>? SendSystemConnectedAsync { get; set; }
     internal Func<Task>? SendSystemDisconnectedAsync { get; set; }
@@ -55,7 +60,7 @@ internal class Worker(
         bool runKeepAliveThread
     )
     {
-        var ethSystemConnector = new EthSystemConnector(address, port)
+        var ethSystemConnector = new Cognex.DataMan.SDK.EthSystemConnector(address, port)
         {
             UserName = "admin",
             Password = password,
@@ -71,7 +76,7 @@ internal class Worker(
         bool runKeepAliveThread
     )
     {
-        var serSystemConnector = new SerSystemConnector(portName, baudrate);
+        var serSystemConnector = new Cognex.DataMan.SDK.SerSystemConnector(portName, baudrate);
 
         ConnectInternal(autoReconnect, serSystemConnector, runKeepAliveThread);
     }
@@ -382,12 +387,45 @@ internal class Worker(
         );
     }
 
+    internal void Refresh()
+    {
+        if (_ethSystemDiscoverer.IsDiscoveryInProgress || _serSystemDiscoverer.IsDiscoveryInProgress)
+            return;
+
+        _ethSystemDiscoverer.Discover();
+        _serSystemDiscoverer.Discover();
+    }
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         using var scope = _serviceProvider.CreateScope();
 
         _scannerLogger = scope.ServiceProvider.GetRequiredService<ScannerLogger>();
         InitializeScannerLogger(_scannerLogger);
+
+        _ethSystemDiscoverer.SystemDiscovered += (e) =>
+        {
+            SendDiscoveredConnectorAsync?.Invoke(new Demo.App.Server.Models.EthSystemConnector()
+            {
+                IpAddress = e.IPAddress.ToString(),
+                Name = e.Name,
+                Port = e.Port,
+                SerialNumber = e.SerialNumber
+            });
+        };
+        _serSystemDiscoverer.SystemDiscovered += (e) =>
+        {
+            SendDiscoveredConnectorAsync?.Invoke(new Demo.App.Server.Models.SerSystemConnector()
+            {
+                Baudrate = e.Baudrate,
+                Name = e.Name,
+                PortName = e.PortName,
+                SerialNumber = e.SerialNumber
+            });
+        };
+
+        _ethSystemDiscoverer.Discover();
+        _serSystemDiscoverer.Discover();
 
         await Task.Delay(Timeout.Infinite, stoppingToken);
     }

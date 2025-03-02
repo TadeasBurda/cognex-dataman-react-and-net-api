@@ -32,6 +32,7 @@ app.MapHub<ImageHub>("/image");
 app.MapHub<ScannerHub>("/scanner");
 
 app.AddScannerEndpoints();
+app.AddScannersEndpoints();
 
 app.MapFallbackToFile("/index.html");
 
