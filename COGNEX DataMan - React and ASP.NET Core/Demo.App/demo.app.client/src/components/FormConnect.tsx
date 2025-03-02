@@ -4,7 +4,11 @@ import { useMutation } from "@tanstack/react-query";
 import { JSX, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { EthSystemConnector, ScannersList, SerSystemConnector } from ".";
-import { postScannerConnectEth, postScannerConnectSer, postScannerDisconnect } from "../api";
+import {
+  postScannerConnectEth,
+  postScannerConnectSer,
+  postScannerDisconnect,
+} from "../api";
 
 type Inputs = {
   device: string;
@@ -14,12 +18,20 @@ type Inputs = {
 };
 
 export default function FormConnect(): JSX.Element {
-  const [scanner, setScanner] = useState<EthSystemConnector | SerSystemConnector | null>(null);
+  const [scanner, setScanner] = useState<
+    EthSystemConnector | SerSystemConnector | null
+  >(null);
 
-  const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm<Inputs>({
+  const {
+    register,
+    handleSubmit,
+    reset,
+    setValue,
+    formState: { errors },
+  } = useForm<Inputs>({
     defaultValues: {
-      device: '',
-      password: '',
+      device: "",
+      password: "",
       runKeepAliveThread: false,
       autoReconnect: false,
     },
@@ -47,17 +59,25 @@ export default function FormConnect(): JSX.Element {
   });
 
   const isPending = useMemo(() => {
-    return disconnectMutation.isPending || connectEthMutation.isPending || connectSerMutation.isPending;
-  }, [disconnectMutation.isPending, connectEthMutation.isPending, connectSerMutation.isPending]);
+    return (
+      disconnectMutation.isPending ||
+      connectEthMutation.isPending ||
+      connectSerMutation.isPending
+    );
+  }, [
+    disconnectMutation.isPending,
+    connectEthMutation.isPending,
+    connectSerMutation.isPending,
+  ]);
 
   return (
     <form
       id="formConnect"
       className="d-grid"
       style={{
-        overflowY: 'auto',
-        gridTemplateColumns: '1fr 1fr',
-        gap: '0.75rem',
+        overflowY: "auto",
+        gridTemplateColumns: "1fr 1fr",
+        gap: "0.75rem",
       }}
       onSubmit={handleSubmit(onSubmit)}
     >
@@ -186,13 +206,15 @@ export default function FormConnect(): JSX.Element {
   }
 
   function isEthSystemConnector(
-    connector: EthSystemConnector | SerSystemConnector
+    connector: EthSystemConnector | SerSystemConnector,
   ): connector is EthSystemConnector {
     return (connector as EthSystemConnector).ipAddress !== undefined;
   }
 
-  function handleOnClickScanner(e: EthSystemConnector | SerSystemConnector): void {
-    setValue('device', isEthSystemConnector(e) ? e.ipAddress : e.portName);
+  function handleOnClickScanner(
+    e: EthSystemConnector | SerSystemConnector,
+  ): void {
+    setValue("device", isEthSystemConnector(e) ? e.ipAddress : e.portName);
     setScanner(e);
   }
 }

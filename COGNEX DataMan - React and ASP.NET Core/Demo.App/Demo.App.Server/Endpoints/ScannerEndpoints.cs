@@ -31,6 +31,20 @@ internal static class ScannerEndpoints
             }
         );
         app.MapPost(
+            "/api/scanner/trigger",
+            (bool on, Worker worker) =>
+            {
+                if (on)
+                {
+                    worker.TriggerOn();
+                }
+                else
+                {
+                    worker.TriggerOff();
+                }
+            }
+        );
+        app.MapPost(
             "/api/scanner/connect/eth",
             (EthSystemConnectorRequest body, Worker worker) =>
             {

@@ -410,6 +410,30 @@ internal class Worker(
         _serSystemDiscoverer.Discover();
     }
 
+    internal void TriggerOn()
+    {
+        try
+        {
+            _dataManSystem?.SendCommand("TRIGGER ON");
+        }
+        catch (Exception ex)
+        {
+            Log(nameof(TriggerOn), "Failed to send TRIGGER ON command: " + ex.ToString());
+        }
+    }
+
+    internal void TriggerOff()
+    {
+        try
+        {
+            _dataManSystem?.SendCommand("TRIGGER OFF");
+        }
+        catch (Exception ex)
+        {
+            Log( nameof(TriggerOn), "Failed to send TRIGGER OFF command: " + ex.ToString());
+        }
+    }
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         using var scope = _serviceProvider.CreateScope();

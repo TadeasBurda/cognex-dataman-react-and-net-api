@@ -1,3 +1,9 @@
+export async function postScannerTrigger(on: boolean): Promise<void> {
+  await fetch(`/api/scanner/trigger?on=${on}`, {
+    method: "POST",
+  });
+}
+
 export async function postScannerLoggingEnabled(
   enable: boolean,
 ): Promise<void> {

@@ -1,4 +1,9 @@
-import { FormConnect, ReceivedLogs, ShowImage } from "./components";
+import {
+  ButtonTrigger,
+  FormConnect,
+  ReceivedLogs,
+  ShowImage,
+} from "./components";
 
 function App() {
   return (
@@ -30,9 +35,7 @@ function App() {
             className="d-grid align-items-center"
             style={{ gridTemplateColumns: "1fr 1fr", columnGap: "0.75rem" }}
           >
-            <button className="btn btn-primary w-100" type="button">
-              Trigger
-            </button>
+            <ButtonTrigger />
             <div className="form-check m-0">
               <input
                 id="formCheck-2"
