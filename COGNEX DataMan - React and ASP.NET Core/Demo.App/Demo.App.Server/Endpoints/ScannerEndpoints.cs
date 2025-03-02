@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using System.Runtime.Versioning;
+using Demo.App.Server.Services;
 
 namespace Demo.App.Server.Endpoints;
 
@@ -27,92 +28,62 @@ internal static class ScannerEndpoints
     {
         app.MapPost(
             "/api/scanner/logging",
-            (bool enable, Worker worker) =>
+            (bool enable, Scanner scanner) =>
             {
-                if (worker.Scanner == null)
-                {
-                    return Results.Problem("Scanner is not initialized.");
-                }
-                worker.Scanner.SetScannerLogging(enable);
-                return Results.Ok();
+                scanner.SetScannerLogging(enable);
             }
         );
         app.MapPost(
             "/api/scanner/live-display",
-            (bool enable, Worker worker) =>
+            (bool enable, Scanner scanner) =>
             {
-                if (worker.Scanner == null)
-                {
-                    return Results.Problem("Scanner is not initialized.");
-                }
-                worker.Scanner.SetLiveDisplay(enable);
-                return Results.Ok();
+                scanner.SetLiveDisplay(enable);
             }
         );
         app.MapPost(
             "/api/scanner/trigger",
-            (bool on, Worker worker) =>
+            (bool on, Scanner scanner) =>
             {
-                if (worker.Scanner == null)
-                {
-                    return Results.Problem("Scanner is not initialized.");
-                }
                 if (on)
                 {
-                    worker.Scanner.TriggerOn();
+                    scanner.TriggerOn();
                 }
                 else
                 {
-                    worker.Scanner.TriggerOff();
+                    scanner.TriggerOff();
                 }
-                return Results.Ok();
             }
         );
         app.MapPost(
             "/api/scanner/connect/eth",
-            (EthSystemConnectorRequest body, Worker worker) =>
+            (EthSystemConnectorRequest body, Scanner scanner) =>
             {
-                if (worker.Scanner == null)
-                {
-                    return Results.Problem("Scanner is not initialized.");
-                }
-                worker.Scanner.Connect(
+                scanner.Connect(
                     autoReconnect: body.AutoReconnect,
                     address: IPAddress.Parse(body.IpAddress),
                     port: body.Port,
                     password: body.Password,
                     runKeepAliveThread: body.RunKeepAliveThread
                 );
-                return Results.Ok();
             }
         );
         app.MapPost(
             "/api/scanner/connect/ser",
-            (SerSystemConnectorRequest body, Worker worker) =>
+            (SerSystemConnectorRequest body, Scanner scanner) =>
             {
-                if (worker.Scanner == null)
-                {
-                    return Results.Problem("Scanner is not initialized.");
-                }
-                worker.Scanner.Connect(
+                scanner.Connect(
                     autoReconnect: body.AutoReconnect,
                     portName: body.PortName,
                     baudrate: body.Baudrate,
                     runKeepAliveThread: body.RunKeepAliveThread
                 );
-                return Results.Ok();
             }
         );
         app.MapPost(
             "/api/scanner/disconnect",
-            (Worker worker) =>
+            (Scanner scanner) =>
             {
-                if (worker.Scanner == null)
-                {
-                    return Results.Problem("Scanner is not initialized.");
-                }
-                worker.Scanner.Disconnect();
-                return Results.Ok();
+                scanner.Disconnect();
             }
         );
         return app;
