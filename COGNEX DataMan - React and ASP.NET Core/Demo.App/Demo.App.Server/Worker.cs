@@ -8,6 +8,7 @@ using Demo.App.Server.Models;
 using Demo.App.Server.Services;
 using Microsoft.AspNetCore.SignalR;
 using System.Drawing;
+using System.IO.Pipelines;
 using System.Net;
 using System.Xml;
 
@@ -332,6 +333,7 @@ internal class Worker(
     private void OnSystemDisconnected(object _, EventArgs __)
     {
         SendSystemDisconnectedAsync?.Invoke();
+        SendScannerMessageAsync?.Invoke(string.Empty);
     }
 
     private void OnSystemConnected(object _, EventArgs __)

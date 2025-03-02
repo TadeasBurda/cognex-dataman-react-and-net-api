@@ -3,6 +3,7 @@ import {
   FormConnect,
   ReceivedLogs,
   ShowImage,
+  ShowReceivedString,
 } from "./components";
 
 function App() {
@@ -48,7 +49,7 @@ function App() {
             </div>
           </section>
           <ShowImage />
-          <p>lbReadString</p>
+          <ShowReceivedString />
         </section>
       </section>
       <ReceivedLogs />
