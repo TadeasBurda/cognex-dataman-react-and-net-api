@@ -55,6 +55,13 @@ internal static class ScannerEndpoints
                 );
             }
         );
+        app.MapPost(
+            "/api/scanner/disconnect",
+            (Worker worker) =>
+            {
+                worker.Disconnect();
+            }
+        );
         return app;
     }
 }

@@ -1,4 +1,4 @@
-import { FormConnect, Logging, ShowImage } from "./components";
+import { FormConnect, ReceivedLogs, ShowImage } from "./components";
 
 function App() {
   return (
@@ -48,7 +48,7 @@ function App() {
           <p>lbReadString</p>
         </section>
       </section>
-      <Logging />
+      <ReceivedLogs />
     </>
   );
 }

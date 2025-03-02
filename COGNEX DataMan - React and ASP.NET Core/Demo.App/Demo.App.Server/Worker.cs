@@ -387,6 +387,20 @@ internal class Worker(
         );
     }
 
+    internal void Disconnect()
+    {
+        if (_dataManSystem == null || _dataManSystem.State != ConnectionState.Connected)
+            return;
+
+        _autoconnect = false;
+        _dataManSystem.Disconnect();
+
+        CleanupConnection();
+
+        _resultCollector?.ClearCachedResults();
+        _resultCollector = null;
+    }
+
     internal void Refresh()
     {
         if (_ethSystemDiscoverer.IsDiscoveryInProgress || _serSystemDiscoverer.IsDiscoveryInProgress)
