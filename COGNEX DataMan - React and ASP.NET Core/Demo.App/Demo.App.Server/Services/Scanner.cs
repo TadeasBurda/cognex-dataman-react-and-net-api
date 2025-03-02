@@ -1,9 +1,9 @@
-﻿using Cognex.DataMan.SDK;
-using Cognex.DataMan.SDK.Utils;
-using System.Drawing;
+﻿using System.Drawing;
 using System.Net;
 using System.Runtime.Versioning;
 using System.Xml;
+using Cognex.DataMan.SDK;
+using Cognex.DataMan.SDK.Utils;
 
 namespace Demo.App.Server.Services;
 
@@ -20,7 +20,7 @@ internal sealed class Scanner : IDisposable
     private static readonly SemaphoreSlim _semaphoreSlim = new(1, 1);
 
     private readonly ILogger<Scanner> _logger;
-    private ScannerLogger? _scannerLogger;
+    private readonly ScannerLogger? _scannerLogger;
 
     private bool _autoReconnect = false;
     private bool _autoconnect = false;
@@ -57,17 +57,26 @@ internal sealed class Scanner : IDisposable
         {
             await SendLogMessageAsync?.Invoke(message);
         };
-    }
 
+        _logger.LogInformation("Scanner instance created.");
+    }
 
     #endregion
 
-    public void Dispose() { }
+    public void Dispose()
+    {
+        _logger.LogInformation("Disposing Scanner instance.");
+    }
 
     internal void Disconnect()
     {
+        _logger.LogInformation("Disconnecting...");
+
         if (_dataManSystem == null || _dataManSystem.State != ConnectionState.Connected)
+        {
+            _logger.LogWarning("DataManSystem is not connected.");
             return;
+        }
 
         _autoconnect = false;
         _dataManSystem.Disconnect();
@@ -76,13 +85,18 @@ internal sealed class Scanner : IDisposable
 
         _resultCollector?.ClearCachedResults();
         _resultCollector = null;
+
+        _logger.LogInformation("Disconnected successfully.");
     }
 
     internal void TriggerOn()
     {
+        _logger.LogInformation("Triggering ON...");
+
         try
         {
             _dataManSystem?.SendCommand("TRIGGER ON");
+            _logger.LogInformation("TRIGGER ON command sent successfully.");
         }
         catch (Exception ex)
         {
@@ -92,19 +106,24 @@ internal sealed class Scanner : IDisposable
 
     internal void TriggerOff()
     {
+        _logger.LogInformation("Triggering OFF...");
+
         try
         {
             _dataManSystem?.SendCommand("TRIGGER OFF");
+            _logger.LogInformation("TRIGGER OFF command sent successfully.");
         }
         catch (Exception ex)
         {
-            Log(nameof(TriggerOn), "Failed to send TRIGGER OFF command: " + ex.ToString());
+            Log(nameof(TriggerOff), "Failed to send TRIGGER OFF command: " + ex.ToString());
         }
     }
 
     [SupportedOSPlatform("windows")]
     internal void SetLiveDisplay(bool isEnabled)
     {
+        _logger.LogInformation("Setting live display to {IsEnabled}.", isEnabled);
+
         if (_dataManSystem == null)
         {
             _logger.LogWarning("DataManSystem is not initialized");
@@ -125,10 +144,12 @@ internal sealed class Scanner : IDisposable
                     OnLiveImageArrived,
                     null
                 );
+                _logger.LogInformation("Live display enabled.");
             }
             else
             {
                 _dataManSystem.SendCommand("SET LIVEIMG.MODE 0");
+                _logger.LogInformation("Live display disabled.");
             }
         }
         catch (Exception ex)
@@ -139,6 +160,8 @@ internal sealed class Scanner : IDisposable
 
     internal void SetScannerLogging(bool isEnabled)
     {
+        _logger.LogInformation("Setting scanner logging to {IsEnabled}.", isEnabled);
+
         if (_systemConnector == null)
         {
             _logger.LogWarning("Connector is not initialized");
@@ -170,6 +193,13 @@ internal sealed class Scanner : IDisposable
         bool runKeepAliveThread
     )
     {
+        _logger.LogInformation(
+            "Connecting to {Address}:{Port} with autoReconnect={AutoReconnect}.",
+            address,
+            port,
+            autoReconnect
+        );
+
         var ethSystemConnector = new Cognex.DataMan.SDK.EthSystemConnector(address, port)
         {
             UserName = "admin",
@@ -186,6 +216,13 @@ internal sealed class Scanner : IDisposable
         bool runKeepAliveThread
     )
     {
+        _logger.LogInformation(
+            "Connecting to {PortName} with baudrate={Baudrate} and autoReconnect={AutoReconnect}.",
+            portName,
+            baudrate,
+            autoReconnect
+        );
+
         var serSystemConnector = new Cognex.DataMan.SDK.SerSystemConnector(portName, baudrate);
 
         ConnectInternal(autoReconnect, serSystemConnector, runKeepAliveThread);
@@ -197,6 +234,11 @@ internal sealed class Scanner : IDisposable
         bool runKeepAliveThread
     )
     {
+        _logger.LogInformation(
+            "Internal connect with autoReconnect={AutoReconnect}.",
+            autoReconnect
+        );
+
         _autoReconnect = autoReconnect;
         _autoconnect = false;
         try
@@ -228,12 +270,15 @@ internal sealed class Scanner : IDisposable
                 _dataManSystem.SetResultTypes(requested_result_types);
             }
             catch { }
+
+            _logger.LogInformation("Connected successfully.");
         }
         catch (Exception ex)
         {
             CleanupConnection();
 
             SendConnectLogMessageAsync?.Invoke("Failed to connect: " + ex.ToString());
+            _logger.LogError(ex, "Failed to connect");
         }
 
         _autoconnect = true;
@@ -278,9 +323,10 @@ internal sealed class Scanner : IDisposable
         );
     }
 
+    [SupportedOSPlatform("windows")]
     private void OnComplexResultCompleted(object _, ComplexResult e)
     {
-        var images = new List<System.Drawing.Image>();
+        var images = new List<Image>();
         var image_graphics = new List<string>();
         string? read_result = null;
         var result_id = -1;
@@ -399,6 +445,8 @@ internal sealed class Scanner : IDisposable
 
     private void CleanupConnection()
     {
+        _logger.LogInformation("Cleaning up connection...");
+
         if (_dataManSystem != null)
         {
             _dataManSystem.SystemConnected -= OnSystemConnected;
@@ -413,10 +461,14 @@ internal sealed class Scanner : IDisposable
 
         _systemConnector = null;
         _dataManSystem = null;
+
+        _logger.LogInformation("Connection cleaned up.");
     }
 
     private string GetReadStringFromResultXml(string resultXml)
     {
+        _logger.LogInformation("Parsing read string from result XML.");
+
         try
         {
             XmlDocument doc = new XmlDocument();
@@ -448,7 +500,10 @@ internal sealed class Scanner : IDisposable
                 return full_string_node.InnerText;
             }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to parse read string from result XML");
+        }
 
         return "";
     }
@@ -467,6 +522,8 @@ internal sealed class Scanner : IDisposable
     [SupportedOSPlatform("windows")]
     private void OnLiveImageArrived(IAsyncResult result)
     {
+        _logger.LogInformation("Live image arrived.");
+
         if (_dataManSystem == null)
         {
             _logger.LogWarning("DataManSystem is not initialized");
@@ -491,7 +548,10 @@ internal sealed class Scanner : IDisposable
                 );
             }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to process live image");
+        }
     }
 
     #endregion
