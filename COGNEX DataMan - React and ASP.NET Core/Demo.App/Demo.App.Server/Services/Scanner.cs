@@ -55,7 +55,13 @@ internal sealed class Scanner : IDisposable
 
         _scannerLogger.ReceivedAsync = async message =>
         {
-            await SendLogMessageAsync?.Invoke(message);
+            if (SendLogMessageAsync == null)
+            {
+                _logger.LogWarning("SendLogMessageAsync is not initialized");
+                return;
+            }
+
+            await SendLogMessageAsync(message);
         };
 
         _logger.LogInformation("Scanner instance created.");
@@ -185,6 +191,7 @@ internal sealed class Scanner : IDisposable
 
     #region Connection
 
+    [SupportedOSPlatform("windows")]
     internal void Connect(
         bool autoReconnect,
         IPAddress address,
@@ -200,7 +207,7 @@ internal sealed class Scanner : IDisposable
             autoReconnect
         );
 
-        var ethSystemConnector = new Cognex.DataMan.SDK.EthSystemConnector(address, port)
+        var ethSystemConnector = new EthSystemConnector(address, port)
         {
             UserName = "admin",
             Password = password,
@@ -209,6 +216,7 @@ internal sealed class Scanner : IDisposable
         ConnectInternal(autoReconnect, ethSystemConnector, runKeepAliveThread);
     }
 
+    [SupportedOSPlatform("windows")]
     internal void Connect(
         bool autoReconnect,
         string portName,
@@ -223,11 +231,12 @@ internal sealed class Scanner : IDisposable
             autoReconnect
         );
 
-        var serSystemConnector = new Cognex.DataMan.SDK.SerSystemConnector(portName, baudrate);
+        var serSystemConnector = new SerSystemConnector(portName, baudrate);
 
         ConnectInternal(autoReconnect, serSystemConnector, runKeepAliveThread);
     }
 
+    [SupportedOSPlatform("windows")]
     private void ConnectInternal(
         bool autoReconnect,
         ISystemConnector systemConnector,
@@ -269,7 +278,10 @@ internal sealed class Scanner : IDisposable
             {
                 _dataManSystem.SetResultTypes(requested_result_types);
             }
-            catch { }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to set result types");
+            }
 
             _logger.LogInformation("Connected successfully.");
         }
@@ -471,33 +483,34 @@ internal sealed class Scanner : IDisposable
 
         try
         {
-            XmlDocument doc = new XmlDocument();
+            var doc = new XmlDocument();
 
             doc.LoadXml(resultXml);
 
-            XmlNode full_string_node = doc.SelectSingleNode("result/general/full_string");
+            var fullStringNode = doc.SelectSingleNode("result/general/full_string");
 
             if (
-                full_string_node != null
+                fullStringNode != null
+                && fullStringNode.Attributes != null
                 && _dataManSystem != null
                 && _dataManSystem.State == ConnectionState.Connected
             )
             {
-                XmlAttribute encoding = full_string_node.Attributes["encoding"];
+                var encoding = fullStringNode.Attributes["encoding"];
                 if (encoding != null && encoding.InnerText == "base64")
                 {
-                    if (!string.IsNullOrEmpty(full_string_node.InnerText))
+                    if (!string.IsNullOrEmpty(fullStringNode.InnerText))
                     {
-                        byte[] code = Convert.FromBase64String(full_string_node.InnerText);
+                        byte[] code = Convert.FromBase64String(fullStringNode.InnerText);
                         return _dataManSystem.Encoding.GetString(code, 0, code.Length);
                     }
                     else
                     {
-                        return "";
+                        return string.Empty;
                     }
                 }
 
-                return full_string_node.InnerText;
+                return fullStringNode.InnerText;
             }
         }
         catch (Exception ex)
@@ -505,7 +518,7 @@ internal sealed class Scanner : IDisposable
             _logger.LogError(ex, "Failed to parse read string from result XML");
         }
 
-        return "";
+        return string.Empty;
     }
 
     private void Log(string function, string message)
