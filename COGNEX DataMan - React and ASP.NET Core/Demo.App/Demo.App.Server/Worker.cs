@@ -4,7 +4,8 @@ using Demo.App.Server.Services;
 
 namespace Demo.App.Server;
 
-internal sealed class Worker(IServiceProvider serviceProvider, ILogger<Worker> logger) : BackgroundService
+internal sealed class Worker(IServiceProvider serviceProvider, ILogger<Worker> logger)
+    : BackgroundService
 {
     #region Fields
 
@@ -32,10 +33,15 @@ internal sealed class Worker(IServiceProvider serviceProvider, ILogger<Worker> l
     {
         base.Dispose();
 
+        _logger.LogInformation("Disposing EthSystemDiscoverer and SerSystemDiscoverer.");
         _ethSystemDiscoverer.Dispose();
         _serSystemDiscoverer.Dispose();
 
-        Scanner?.Dispose();
+        if (Scanner != null)
+        {
+            _logger.LogInformation("Disposing Scanner.");
+            Scanner.Dispose();
+        }
     }
 
     internal void Refresh()
@@ -43,8 +49,14 @@ internal sealed class Worker(IServiceProvider serviceProvider, ILogger<Worker> l
         if (
             _ethSystemDiscoverer.IsDiscoveryInProgress || _serSystemDiscoverer.IsDiscoveryInProgress
         )
+        {
+            _logger.LogWarning("Discovery is already in progress.");
             return;
+        }
 
+        _logger.LogInformation(
+            "Starting discovery for EthSystemDiscoverer and SerSystemDiscoverer."
+        );
         _ethSystemDiscoverer.Discover();
         _serSystemDiscoverer.Discover();
     }
@@ -54,17 +66,19 @@ internal sealed class Worker(IServiceProvider serviceProvider, ILogger<Worker> l
         using var scope = _serviceProvider.CreateScope();
 
         Scanner = scope.ServiceProvider.GetRequiredService<Scanner>();
+        _logger.LogInformation("Scanner service initialized.");
 
         InitializeEthSystemDiscoverer();
         InitializeSerSystemDiscoverer();
 
         try
         {
+            _logger.LogInformation("Worker running, waiting for cancellation.");
             await Task.Delay(Timeout.Infinite, stoppingToken);
         }
-        catch (TaskCanceledException)
+        catch (Exception ex)
         {
-            // Task was canceled, no action needed
+            _logger.LogError(ex, "An error occurred.");
         }
     }
 
@@ -74,6 +88,12 @@ internal sealed class Worker(IServiceProvider serviceProvider, ILogger<Worker> l
     {
         _ethSystemDiscoverer.SystemDiscovered += async (e) =>
         {
+            _logger.LogInformation(
+                "EthSystem discovered: {Name} ({IPAddress})",
+                e.Name,
+                e.IPAddress
+            );
+
             if (SendDiscoveredConnectorAsync != null)
             {
                 await SendDiscoveredConnectorAsync(
@@ -94,6 +114,8 @@ internal sealed class Worker(IServiceProvider serviceProvider, ILogger<Worker> l
     {
         _serSystemDiscoverer.SystemDiscovered += async (e) =>
         {
+            _logger.LogInformation("SerSystem discovered: {Name} ({PortName})", e.Name, e.PortName);
+
             if (SendDiscoveredConnectorAsync != null)
             {
                 await SendDiscoveredConnectorAsync(
