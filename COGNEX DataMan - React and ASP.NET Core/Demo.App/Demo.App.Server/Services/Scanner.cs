@@ -48,7 +48,7 @@ internal sealed class Scanner : IDisposable
 
     #region Constructors
 
-    internal Scanner(ILogger<Scanner> logger, ScannerLogger scannerLogger)
+    public Scanner(ILogger<Scanner> logger, ScannerLogger scannerLogger)
     {
         _logger = logger;
         _scannerLogger = scannerLogger;

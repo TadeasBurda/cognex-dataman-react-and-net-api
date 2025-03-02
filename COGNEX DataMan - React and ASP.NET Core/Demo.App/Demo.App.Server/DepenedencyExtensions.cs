@@ -1,5 +1,4 @@
-﻿using Demo.App.Server.Hubs;
-using Demo.App.Server.Services;
+﻿using Demo.App.Server.Services;
 
 namespace Demo.App.Server;
 
@@ -9,7 +8,6 @@ internal static class DepenedencyExtensions
     {
         services.AddServices();
         services.AddWorkers();
-        services.AddHubs();
         return services;
     }
 
@@ -24,12 +22,6 @@ internal static class DepenedencyExtensions
     {
         services.AddSingleton<Worker>();
         services.AddHostedService(provider => provider.GetRequiredService<Worker>());
-        return services;
-    }
-
-    internal static IServiceCollection AddHubs(this IServiceCollection services)
-    {
-        services.AddSingleton<LoggingHub>();
         return services;
     }
 }

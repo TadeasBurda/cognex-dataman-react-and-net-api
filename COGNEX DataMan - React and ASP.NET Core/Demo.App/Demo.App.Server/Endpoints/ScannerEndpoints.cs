@@ -3,6 +3,8 @@ using System.Runtime.Versioning;
 
 namespace Demo.App.Server.Endpoints;
 
+internal sealed record ScannerNotInitResponse(string Status = "Scanner is not initialized.");
+
 internal sealed record EthSystemConnectorRequest
 {
     internal required string IpAddress { get; init; }
@@ -29,60 +31,90 @@ internal static class ScannerEndpoints
             "/api/scanner/logging",
             (bool enable, Worker worker) =>
             {
-                worker.Scanner?.SetScannerLogging(enable);
+                if (worker.Scanner == null)
+                {
+                    return Results.BadRequest(new ScannerNotInitResponse());
+                }
+                worker.Scanner.SetScannerLogging(enable);
+                return Results.Ok();
             }
         );
         app.MapPost(
             "/api/scanner/live-display",
             (bool enable, Worker worker) =>
             {
-                worker.Scanner?.SetLiveDisplay(enable);
+                if (worker.Scanner == null)
+                {
+                    return Results.BadRequest(new ScannerNotInitResponse());
+                }
+                worker.Scanner.SetLiveDisplay(enable);
+                return Results.Ok();
             }
         );
         app.MapPost(
             "/api/scanner/trigger",
             (bool on, Worker worker) =>
             {
+                if (worker.Scanner == null)
+                {
+                    return Results.BadRequest(new ScannerNotInitResponse());
+                }
                 if (on)
                 {
-                    worker.Scanner?.TriggerOn();
+                    worker.Scanner.TriggerOn();
                 }
                 else
                 {
-                    worker.Scanner?.TriggerOff();
+                    worker.Scanner.TriggerOff();
                 }
+                return Results.Ok();
             }
         );
         app.MapPost(
             "/api/scanner/connect/eth",
             (EthSystemConnectorRequest body, Worker worker) =>
             {
-                worker.Scanner?.Connect(
+                if (worker.Scanner == null)
+                {
+                    return Results.BadRequest(new ScannerNotInitResponse());
+                }
+                worker.Scanner.Connect(
                     autoReconnect: body.AutoReconnect,
                     address: IPAddress.Parse(body.IpAddress),
                     port: body.Port,
                     password: body.Password,
                     runKeepAliveThread: body.RunKeepAliveThread
                 );
+                return Results.Ok();
             }
         );
         app.MapPost(
             "/api/scanner/connect/ser",
             (SerSystemConnectorRequest body, Worker worker) =>
             {
-                worker.Scanner?.Connect(
+                if (worker.Scanner == null)
+                {
+                    return Results.BadRequest(new ScannerNotInitResponse());
+                }
+                worker.Scanner.Connect(
                     autoReconnect: body.AutoReconnect,
                     portName: body.PortName,
                     baudrate: body.Baudrate,
                     runKeepAliveThread: body.RunKeepAliveThread
                 );
+                return Results.Ok();
             }
         );
         app.MapPost(
             "/api/scanner/disconnect",
             (Worker worker) =>
             {
-                worker.Scanner?.Disconnect();
+                if (worker.Scanner == null)
+                {
+                    return Results.BadRequest(new ScannerNotInitResponse());
+                }
+                worker.Scanner.Disconnect();
+                return Results.Ok();
             }
         );
         return app;
