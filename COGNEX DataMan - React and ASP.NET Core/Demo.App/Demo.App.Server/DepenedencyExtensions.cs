@@ -16,6 +16,7 @@ internal static class DepenedencyExtensions
     internal static IServiceCollection AddServices(this IServiceCollection services)
     {
         services.AddSingleton<ScannerLogger>();
+        services.AddSingleton<Scanner>();
         return services;
     }
 

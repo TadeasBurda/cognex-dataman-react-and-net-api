@@ -1,7 +1,8 @@
-﻿using Microsoft.AspNetCore.SignalR;
-using System.Drawing;
+﻿using System.Drawing;
 using System.Drawing.Imaging;
 using System.Runtime.Versioning;
+using Demo.App.Server.Services;
+using Microsoft.AspNetCore.SignalR;
 
 namespace Demo.App.Server.Hubs;
 
@@ -13,9 +14,9 @@ public interface IImageHub
 internal class ImageHub : Hub<IImageHub>
 {
     [SupportedOSPlatform("windows")]
-    public ImageHub(Worker worker)
+    public ImageHub(Scanner scanner)
     {
-        worker.SendImageAsync = SendImageAsync;
+        scanner.SendImageAsync = SendImageAsync;
     }
 
     [SupportedOSPlatform("windows")]

@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using System.Runtime.Versioning;
 
 namespace Demo.App.Server.Endpoints;
 
@@ -21,20 +22,21 @@ internal sealed record SerSystemConnectorRequest
 
 internal static class ScannerEndpoints
 {
+    [SupportedOSPlatform("windows")]
     internal static WebApplication AddScannerEndpoints(this WebApplication app)
     {
         app.MapPost(
             "/api/scanner/logging",
             (bool enable, Worker worker) =>
             {
-                worker.SetScannerLogging(enable);
+                worker.Scanner?.SetScannerLogging(enable);
             }
         );
         app.MapPost(
             "/api/scanner/live-display",
             (bool enable, Worker worker) =>
             {
-                worker.SetLiveDisplay(enable);
+                worker.Scanner?.SetLiveDisplay(enable);
             }
         );
         app.MapPost(
@@ -43,11 +45,11 @@ internal static class ScannerEndpoints
             {
                 if (on)
                 {
-                    worker.TriggerOn();
+                    worker.Scanner?.TriggerOn();
                 }
                 else
                 {
-                    worker.TriggerOff();
+                    worker.Scanner?.TriggerOff();
                 }
             }
         );
@@ -55,7 +57,7 @@ internal static class ScannerEndpoints
             "/api/scanner/connect/eth",
             (EthSystemConnectorRequest body, Worker worker) =>
             {
-                worker.Connect(
+                worker.Scanner?.Connect(
                     autoReconnect: body.AutoReconnect,
                     address: IPAddress.Parse(body.IpAddress),
                     port: body.Port,
@@ -68,7 +70,7 @@ internal static class ScannerEndpoints
             "/api/scanner/connect/ser",
             (SerSystemConnectorRequest body, Worker worker) =>
             {
-                worker.Connect(
+                worker.Scanner?.Connect(
                     autoReconnect: body.AutoReconnect,
                     portName: body.PortName,
                     baudrate: body.Baudrate,
@@ -80,7 +82,7 @@ internal static class ScannerEndpoints
             "/api/scanner/disconnect",
             (Worker worker) =>
             {
-                worker.Disconnect();
+                worker.Scanner?.Disconnect();
             }
         );
         return app;

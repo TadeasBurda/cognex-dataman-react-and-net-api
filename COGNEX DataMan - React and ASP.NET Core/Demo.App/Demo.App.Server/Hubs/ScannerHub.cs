@@ -1,4 +1,5 @@
 ﻿using Demo.App.Server.Models;
+using Demo.App.Server.Services;
 using Microsoft.AspNetCore.SignalR;
 
 namespace Demo.App.Server.Hubs;
@@ -12,10 +13,11 @@ public interface IScannerHub
 
 internal class ScannerHub : Hub<IScannerHub>
 {
-    public ScannerHub(Worker worker)
+    public ScannerHub(Worker worker, Scanner scanner)
     {
-        worker.SendScannerMessageAsync = SendScannerMessageAsync;
         worker.SendDiscoveredConnectorAsync = SendDiscoveredConnectorAsync;
+
+        scanner.SendScannerMessageAsync = SendScannerMessageAsync;
     }
 
     private async Task SendDiscoveredConnectorAsync(Connector connector)

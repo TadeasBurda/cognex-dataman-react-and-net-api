@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.SignalR;
+﻿using Demo.App.Server.Services;
+using Microsoft.AspNetCore.SignalR;
 
 namespace Demo.App.Server.Hubs;
 
@@ -11,16 +12,15 @@ public interface ILoggingHub
 
 internal class LoggingHub : Hub<ILoggingHub>
 {
-    public LoggingHub(Worker worker)
+    public LoggingHub(Scanner scanner)
     {
-        worker.SendLogMessageAsync = SendLogMessageAsync;
-        worker.SendConnectLogMessageAsync = SendConnectLogMessageAsync;
-
-        worker.SendSystemConnectedAsync = SendSystemConnectedAsync;
-        worker.SendSystemDisconnectedAsync = SendSystemDisconnectedAsync;
-        worker.SendSystemWentOnlineAsync = SendSystemWentOnlineAsync;
-        worker.SendSystemWentOfflineAsync = SendSystemWentOfflineAsync;
-        worker.SendKeepAliveResponseMissedAsync = SendKeepAliveResponseMissedAsync;
+        scanner.SendLogMessageAsync = SendLogMessageAsync;
+        scanner.SendConnectLogMessageAsync = SendConnectLogMessageAsync;
+        scanner.SendSystemConnectedAsync = SendSystemConnectedAsync;
+        scanner.SendSystemDisconnectedAsync = SendSystemDisconnectedAsync;
+        scanner.SendSystemWentOnlineAsync = SendSystemWentOnlineAsync;
+        scanner.SendSystemWentOfflineAsync = SendSystemWentOfflineAsync;
+        scanner.SendKeepAliveResponseMissedAsync = SendKeepAliveResponseMissedAsync;
     }
 
     private async Task SendConnectLogMessageAsync(string arg)
