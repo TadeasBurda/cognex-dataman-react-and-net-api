@@ -1,6 +1,7 @@
 using Demo.App.Server;
 using Demo.App.Server.Endpoints;
 using Demo.App.Server.Hubs;
+using System.Runtime.Versioning;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -31,6 +32,7 @@ app.MapHub<LoggingHub>("/logging");
 app.MapHub<ImageHub>("/image");
 app.MapHub<ScannerHub>("/scanner");
 
+// TODO: Fix only windows support
 app.AddScannerEndpoints();
 app.AddScannersEndpoints();
 
