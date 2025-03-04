@@ -1,6 +1,6 @@
 ﻿namespace Demo.App.Server.Models;
 
-internal class SerSystemConnector : Connector
+public class SerSystemConnector : Connector
 {
     public required string PortName { get; init; }
 

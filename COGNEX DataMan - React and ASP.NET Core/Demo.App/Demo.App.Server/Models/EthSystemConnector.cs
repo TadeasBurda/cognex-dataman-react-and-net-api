@@ -1,8 +1,8 @@
 ﻿namespace Demo.App.Server.Models;
 
-internal class EthSystemConnector : Connector
+public class EthSystemConnector : Connector
 {
-    internal required string IpAddress { get; init; }
+    public required string IpAddress { get; init; }
 
-    internal required int Port { get; init; }
+    public required int Port { get; init; }
 }
