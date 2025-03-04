@@ -32,7 +32,7 @@ export default function ScannersList(props: Readonly<Props>): JSX.Element {
       .catch((err) => console.error("SignalR Connection Error: ", err));
 
     connection.on("Discovered", (message) => {
-      setMessages((prev) => [...prev, JSON.parse(message)]);
+      setMessages((prev) => [...prev, message]);
     });
 
     return () => {
