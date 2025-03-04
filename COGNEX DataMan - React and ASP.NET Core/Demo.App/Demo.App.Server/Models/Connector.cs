@@ -1,6 +1,6 @@
 ﻿namespace Demo.App.Server.Models;
 
-public abstract class Connector
+public abstract record Connector
 {
     public required string Name { get; init; }
 

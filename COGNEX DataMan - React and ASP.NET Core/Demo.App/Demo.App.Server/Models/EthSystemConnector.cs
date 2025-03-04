@@ -1,6 +1,6 @@
 ﻿namespace Demo.App.Server.Models;
 
-public class EthSystemConnector : Connector
+public record EthSystemConnector : Connector
 {
     public required string IpAddress { get; init; }
 
