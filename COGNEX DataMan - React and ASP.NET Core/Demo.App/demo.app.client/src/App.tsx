@@ -1,5 +1,6 @@
 import {
     ButtonTrigger,
+    ConnectLogs,
     FormConnect,
     LiveDisplay,
     LiveDisplayProvider,
@@ -24,7 +25,7 @@ function App() {
           style={{ overflowY: "auto", gridTemplateRows: "2fr 1fr" }}
         >
           <FormConnect />
-          <textarea readOnly></textarea>
+          <ConnectLogs />
         </section>
         <section
           className="d-grid"
