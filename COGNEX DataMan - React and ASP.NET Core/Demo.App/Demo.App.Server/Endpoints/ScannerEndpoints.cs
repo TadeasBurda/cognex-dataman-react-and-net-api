@@ -1,25 +1,9 @@
 ﻿using System.Net;
 using System.Runtime.Versioning;
+using Demo.App.Server.Models;
 using Demo.App.Server.Services;
 
 namespace Demo.App.Server.Endpoints;
-
-internal sealed record EthSystemConnectorRequest
-{
-    internal required string IpAddress { get; init; }
-    internal required int Port { get; init; }
-    internal required string Password { get; init; }
-    internal required bool RunKeepAliveThread { get; init; }
-    internal required bool AutoReconnect { get; init; }
-}
-
-internal sealed record SerSystemConnectorRequest
-{
-    internal required string PortName { get; init; }
-    internal required int Baudrate { get; init; }
-    internal required bool RunKeepAliveThread { get; init; }
-    internal required bool AutoReconnect { get; init; }
-}
 
 internal static class ScannerEndpoints
 {
