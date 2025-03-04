@@ -15,7 +15,7 @@ export default function ShowImage(): JSX.Element {
       .then(() => console.log("Connected to SignalR"))
       .catch((err) => console.error("SignalR Connection Error: ", err));
 
-    connection.on("ReceivedLogs", (base64Image) => {
+    connection.on("ReceiveImage", (base64Image) => {
       setImageSrc(`data:image/png;base64,${base64Image}`);
     });
 
