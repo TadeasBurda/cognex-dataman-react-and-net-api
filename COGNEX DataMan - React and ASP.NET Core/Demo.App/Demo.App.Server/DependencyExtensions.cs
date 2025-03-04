@@ -2,7 +2,7 @@
 
 namespace Demo.App.Server;
 
-internal static class DepenedencyExtensions
+internal static class DependencyExtensions
 {
     internal static IServiceCollection Configure(this IServiceCollection services)
     {
